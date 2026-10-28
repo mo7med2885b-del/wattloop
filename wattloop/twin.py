@@ -254,7 +254,14 @@ def evaluate(spec: dict, fixes: list[dict], params: dict | None = None) -> dict:
         "payback_months": round(capex / (egp_year / 12), 1) if egp_year > 0 and capex > 0 else (0.0 if capex == 0 and egp_year > 0 else None),
         "hourly_before": [round(v, 2) for v in hourly_kw(spec, params)],
         "hourly_after": [round(v, 2) for v in hourly_kw(cur, params)],
+        "parts_before": _parts(spec, params),
+        "parts_after": _parts(cur, params),
     }
+
+
+def _parts(spec: dict, params: dict | None) -> dict:
+    _, parts = hourly_kw(spec, params, split=True)
+    return {k: [round(v, 1) for v in vals] for k, vals in parts.items()}
 
 
 def sensitivity(spec: dict, fixes: list[dict]) -> dict:

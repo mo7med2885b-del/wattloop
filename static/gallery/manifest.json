@@ -1,0 +1,72 @@
+[
+ {
+  "id": "demo",
+  "title": "Food plant (Delta Foods)",
+  "file": "/api/demo/image",
+  "bill_kwh": 68600,
+  "description": "__demo__"
+ },
+ {
+  "id": "textile",
+  "title": "Textile weaving mill",
+  "file": "/static/gallery/textile.jpg",
+  "bill_kwh": 145000,
+  "description": ""
+ },
+ {
+  "id": "plastics",
+  "title": "Plastic injection moulding shop",
+  "file": "/static/gallery/plastics.jpg",
+  "bill_kwh": 98000,
+  "description": ""
+ },
+ {
+  "id": "bottling",
+  "title": "Water bottling line",
+  "file": "/static/gallery/bottling.jpg",
+  "bill_kwh": 76000,
+  "description": ""
+ },
+ {
+  "id": "ceramics",
+  "title": "Ceramic tile factory",
+  "file": "/static/gallery/ceramics.jpg",
+  "bill_kwh": 210000,
+  "description": ""
+ },
+ {
+  "id": "metal",
+  "title": "Metal fabrication workshop",
+  "file": "/static/gallery/metal.jpg",
+  "bill_kwh": 38000,
+  "description": ""
+ },
+ {
+  "id": "bakery",
+  "title": "Biscuit and bakery plant",
+  "file": "/static/gallery/bakery.jpg",
+  "bill_kwh": 62000,
+  "description": ""
+ },
+ {
+  "id": "coldstore",
+  "title": "Cold storage warehouse",
+  "file": "/static/gallery/coldstore.jpg",
+  "bill_kwh": 120000,
+  "description": ""
+ },
+ {
+  "id": "pumpstation",
+  "title": "Water pumping station",
+  "file": "/static/gallery/pumpstation.jpg",
+  "bill_kwh": 90000,
+  "description": ""
+ },
+ {
+  "id": "wood",
+  "title": "Furniture and wood workshop",
+  "file": "/static/gallery/wood.jpg",
+  "bill_kwh": 41000,
+  "description": ""
+ }
+]
