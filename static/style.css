@@ -134,3 +134,5 @@ button.primary.danger{background:var(--bad);color:#fff}
 .photo.scanning::after{content:"";position:absolute;left:0;right:0;height:26%;top:0;background:linear-gradient(transparent,color-mix(in srgb,var(--or) 38%,transparent),transparent);border-bottom:1px solid var(--or);animation:scan 1.8s ease-in-out infinite;pointer-events:none}
 @keyframes scan{0%{transform:translateY(-100%)}100%{transform:translateY(380%)}}
 @media(prefers-reduced-motion:reduce){.ring,.lbar i,.photo.scanning::after,.lsteps li.act::before{animation:none}}
+
+.co{--mut:#9aa0a6;--tx:#e8eaec}.co .sub{background:#fff;color:#111}
