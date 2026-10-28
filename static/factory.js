@@ -3,7 +3,7 @@
    Everything shown is built from the run's twin specs; nothing is a canned animation. */
 window.Factory = (function () {
   const T = THREE;
-  const OR = 0xff6a00, GR = 0x35e08a, BODY = 0x1b1e22, DARK = 0x111316, EDGE = 0xaeb4ba;
+  const OR = 0xff6a00, GR = 0x35e08a, BODY = 0x4a525d, DARK = 0x2b313a, EDGE = 0xf0f4f8;
   let LIGHT = false;  // light mode lightens dark machine bodies and darkens edge lines; accents stay orange / green
   let renderer, cam, clock, box, canvas, calloutsEl, leadersEl, running = false;
   const S = { specA: null, specB: null, partsA: {}, partsB: {}, hourA: [], hourB: [], mode: "now", paused: false, day: 6 / 24, focus: null };
@@ -11,9 +11,9 @@ window.Factory = (function () {
   const orbit = { az: 0.62, el: 0.5, dist: 46, tx: 0, ty: 1.2, tz: 0 };
   let drag = null, DAY = 36, lastDom = 0, cos = {}, onFrame = null, onFocus = null, dust = null;
   const tone = (c) => { if (!LIGHT) return c; const k = new T.Color(c); if (k.r * .3 + k.g * .59 + k.b * .11 > .3) return c; return k.lerp(new T.Color(0xffffff), .8).getHex(); };
-  const mat = (c, o = {}) => new T.MeshStandardMaterial({ color: tone(c), roughness: LIGHT ? .55 : .38, metalness: LIGHT ? .2 : .6, ...o });
+  const mat = (c, o = {}) => new T.MeshStandardMaterial({ color: tone(c), roughness: LIGHT ? .55 : .5, metalness: LIGHT ? .2 : .2, ...o });
   let STATIC = false;  // platform pieces are not animated when the machines assemble
-  function edges(mesh, col = EDGE, op = .55) { mesh.userData.part = true; mesh.userData.static = STATIC; if (LIGHT && col !== OR && col !== GR) { col = 0x3f474f; op = Math.min(1, op + .25); } const e = new T.LineSegments(new T.EdgesGeometry(mesh.geometry, 28), new T.LineBasicMaterial({ color: col, transparent: true, opacity: op })); mesh.add(e); mesh.userData.edge = e; return mesh; }
+  function edges(mesh, col = EDGE, op = .55) { mesh.userData.part = true; mesh.userData.static = STATIC; if (LIGHT && col !== OR && col !== GR) { col = 0x3f474f; op = Math.min(1, op + .25); } if (!LIGHT) op = Math.min(1, op * 1.3 + .12); const e = new T.LineSegments(new T.EdgesGeometry(mesh.geometry, 28), new T.LineBasicMaterial({ color: col, transparent: true, opacity: op })); mesh.add(e); mesh.userData.edge = e; return mesh; }
   const mk = (geo, col, ec, op) => edges(new T.Mesh(geo, mat(col)), ec, op);
   const Box = (w, h, d, col = BODY, ec, op) => mk(new T.BoxGeometry(w, h, d), col, ec, op);
   const Cyl = (r, h, col = BODY, ec, seg = 22, op) => mk(new T.CylinderGeometry(r, r, h, seg), col, ec, op);
@@ -38,18 +38,19 @@ window.Factory = (function () {
 
   function build(spec, after) {
     const sc = new T.Scene(), w = { sc, spec, after, anchors: {}, lights: [], glows: [], pumps: [], boxes: [], pv: [], flows: {}, heat: {}, fills: {}, leaks: null, fan: null, stby: null };
-    const bg = LIGHT ? 0xe9ecf0 : 0x08090a; sc.background = new T.Color(bg); sc.fog = new T.Fog(bg, 55, 120);
-    const amb = new T.AmbientLight(0xb8c4d0, LIGHT ? .9 : .42); sc.add(amb); w.amb = amb;
+    const bg = LIGHT ? 0xe9ecf0 : 0x12151b; sc.background = new T.Color(bg); sc.fog = new T.Fog(bg, 55, 120);
+    const amb = new T.AmbientLight(0xc4d0dc, LIGHT ? .9 : .8); sc.add(amb); w.amb = amb;
+    if (!LIGHT) { sc.add(new T.HemisphereLight(0xdbe6ff, 0x20242b, .7)); const key = new T.PointLight(0xffa860, 1.1, 60); key.position.set(0, 9, 3); sc.add(key); }
     const sun = new T.DirectionalLight(0xffe2c0, .8); sun.position.set(-12, 22, 14); sc.add(sun); w.sun = sun;
-    const rim = new T.DirectionalLight(0x6a8cff, .35); rim.position.set(14, 10, -16); sc.add(rim);
+    const rim = new T.DirectionalLight(0x7aa0ff, LIGHT ? .35 : .7); rim.position.set(14, 10, -16); sc.add(rim);
     STATIC = true;
     // platform: slab, fine grid, orange perimeter like the reference
-    const slab = new T.Mesh(new T.BoxGeometry(34, 1, 23), mat(0x0f1113, { roughness: .8, metalness: .2 })); slab.position.y = -.5; edges(slab, 0x3a3e44, .8); sc.add(slab);
-    const grid = new T.GridHelper(34, 34, LIGHT ? 0xb9c0c7 : 0x24272b, LIGHT ? 0xd0d5db : 0x1a1c1f); grid.position.y = .02; grid.scale.z = 23 / 34; sc.add(grid);
+    const slab = new T.Mesh(new T.BoxGeometry(34, 1, 23), mat(0x252a32, { roughness: .8, metalness: .1 })); slab.position.y = -.5; edges(slab, 0x6a717b, .9); sc.add(slab);
+    const grid = new T.GridHelper(34, 34, LIGHT ? 0xb9c0c7 : 0x3a414b, LIGHT ? 0xd0d5db : 0x2d333b); grid.position.y = .02; grid.scale.z = 23 / 34; sc.add(grid);
     const per = zoneOutline(sc, 0, 0, 33.4, 22.4, 0x7a3300); per.material.opacity = .02;
     // distant structures for context (tanks and sheds), like the wider factory in the reference
-    [[-25, -10, 2.4, 5], [-29, 4, 2, 3.5], [25, -13, 2.6, 5.5], [30, 3, 1.8, 4]].forEach(([x, z, r, h]) => { const t = Cyl(r, h, 0x15181b, 0x5a5f66, 24, .5); t.position.set(x, h / 2, z); sc.add(t); });
-    [[-24, 12, 6, 3, 5], [24, 14, 7, 2.5, 5]].forEach(([x, z, bw, bh, bd]) => { const b = Box(bw, bh, bd, 0x14171a, 0x5a5f66, .5); b.position.set(x, bh / 2, z); sc.add(b); });
+    [[-25, -10, 2.4, 5], [-29, 4, 2, 3.5], [25, -13, 2.6, 5.5], [30, 3, 1.8, 4]].forEach(([x, z, r, h]) => { const t = Cyl(r, h, 0x20252c, 0x4a5058, 24, .35); t.position.set(x, h / 2, z); sc.add(t); });
+    [[-24, 12, 6, 3, 5], [24, 14, 7, 2.5, 5]].forEach(([x, z, bw, bh, bd]) => { const b = Box(bw, bh, bd, 0x20252c, 0x4a5058, .35); b.position.set(x, bh / 2, z); sc.add(b); });
     STATIC = false;
     const byType = (t) => spec.components.filter((c) => c.type === t);
     const zc = (c) => (after && isFixed[c.type](c) ? GR : OR);
@@ -127,7 +128,7 @@ window.Factory = (function () {
 
   function animate(w, hour, dt, parts) {
     const sp = w.spec, sh = sp.shift, t = performance.now() / 1000, day = hour >= 6 && hour < 18, sunk = day ? Math.sin((hour - 6) / 12 * Math.PI) : 0;
-    w.amb.intensity = (LIGHT ? .7 : .36) + .22 * sunk; w.sun.intensity = (LIGHT ? .35 : .4) + .6 * sunk;
+    w.amb.intensity = (LIGHT ? .7 : .62) + .22 * sunk; w.sun.intensity = (LIGHT ? .35 : .7) + .6 * sunk;
     const c = (ty) => sp.components.find((x) => x.type === ty), L = c("lighting"), P = c("pump"), C = c("compressor"), M = c("motors"), H = c("hvac");
     let lit = false;
     if (L) { lit = active(L, hour, sh); if (!lit && !L.controls && L.after_hours_h > 0) lit = ((hour - sh.end + 24) % 24) < L.after_hours_h; }
@@ -147,7 +148,7 @@ window.Factory = (function () {
     const hi = Math.floor(hour) % 24;
     Object.entries(w.heat).forEach(([id, g]) => { const comp = sp.components.find((x) => x.id === id); const run = comp && active(comp, hour, sh) && wasteful[comp.type](comp); g.material.opacity += ((run ? .5 + .3 * Math.sin(t * 3) : 0) - g.material.opacity) * Math.min(1, dt * 5); });
     Object.entries(w.flows).forEach(([id, l]) => { const kw = Math.abs((parts[id] || [])[hi] || 0); l.material.dashSize = .7; l.material.opacity = kw > .3 ? .95 : .25; l.material.dashOffset = (l.material.dashOffset || 0) - dt * Math.min(9, .8 + kw * .1); });
-    Object.entries(w.fills).forEach(([id, f]) => { const kw = Math.abs((parts[id] || [])[hi] || 0); f.material.opacity = .05 + Math.min(.14, kw * .004); });
+    Object.entries(w.fills).forEach(([id, f]) => { const kw = Math.abs((parts[id] || [])[hi] || 0); f.material.opacity = .08 + Math.min(.18, kw * .005); });
   }
 
   // ------------------------------------------------------------------ callouts
@@ -179,17 +180,23 @@ window.Factory = (function () {
   }
   const tmp = new T.Vector3();
   function placeCallouts(w, rect) {
-    const placed = [];   // simple collision avoidance: push a tag up until it no longer covers one already placed
-    Object.values(cos).forEach(({ d, ln, c }) => {
-      const a = w.anchors[c.id]; const hidden = !a || (S.focus && S.focus !== c.id);
+    const items = [];
+    Object.values(cos).forEach((o) => {
+      const { d, ln, c } = o, a = w.anchors[c.id], hidden = !a || (S.focus && S.focus !== c.id);
       if (hidden) { d.style.opacity = 0; d.style.pointerEvents = "none"; ln.setAttribute("opacity", 0); return; }
-      tmp.copy(a).project(cam); const x = (tmp.x * .5 + .5) * rect.w, y = (-tmp.y * .5 + .5) * rect.h, o = OFFS[c.type] || [0, -70];
-      const cx = Math.max(80, Math.min(rect.w - 80, x + o[0])), cy = Math.max(76, Math.min(rect.h - 30, y + o[1]));
-      let top = cy; const hgt = d.offsetHeight || 80;
-      for (let k = 0; k < 8; k++) { const hit = placed.find((p) => Math.abs(p.x - cx) < 158 && top - hgt < p.y && top > p.y - p.h); if (!hit) break; top = hit.y - hit.h - 4; }
-      top = Math.max(hgt + 8, top); placed.push({ x: cx, y: top, h: hgt });
+      tmp.copy(a).project(cam); items.push({ o, x: (tmp.x * .5 + .5) * rect.w, y: (-tmp.y * .5 + .5) * rect.h });
+    });
+    const rows = [];   // right edge used so far on each rail row
+    items.sort((p, q) => p.x - q.x).forEach((it) => {
+      const { d, ln, c } = it.o, hgt = d.offsetHeight || 60, half = 71;
+      let cx = Math.max(half + 6, Math.min(rect.w - half - 6, it.x)), top, r = 0;
+      if (S.focus) { top = Math.max(hgt + 10, it.y - 70); cx = Math.max(half + 6, Math.min(rect.w - half - 6, it.x)); }
+      else {
+        while (r < 4 && cx - half < (rows[r] ?? -1e9) + 8) r++;
+        rows[r] = cx + half; top = 14 + (r + 1) * hgt + r * 8;
+      }
       d.style.opacity = 1; d.style.pointerEvents = "auto"; d.style.left = cx + "px"; d.style.top = top + "px";
-      const col = d.classList.contains("fixed") ? "#35e08a" : "#ff6a00"; ln.setAttribute("d", `M${cx},${top} L${x},${y}`); ln.setAttribute("stroke", col); ln.setAttribute("opacity", .85);
+      const col = d.classList.contains("fixed") ? "#35e08a" : "#ff6a00"; ln.setAttribute("d", `M${cx},${top} L${it.x},${it.y}`); ln.setAttribute("stroke", col); ln.setAttribute("opacity", .85);
     });
   }
 
