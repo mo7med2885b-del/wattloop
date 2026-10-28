@@ -29,7 +29,7 @@ Built for Egyptian industry, where energy prices keep rising and most small faci
 Models propose and explain. All arithmetic, verification and confidence scoring is plain code, and every model step has a deterministic fallback.
 
 ## Meta models used
-Muse Spark 1.3 (vision, text, structured output, reasoning), SAM 3.1 (segmentation), Muse Image 1.0 (demo and gallery photos, logo). A real run uses about 14 model calls and costs roughly two to three US cents.
+Muse Spark 1.3 (vision, text, structured output, reasoning), SAM 3.1 (segmentation), Muse Image 1.0 (demo and gallery photos, logo). A real run uses about 15 model calls and costs roughly 15 to 25 US cents at list prices.
 
 ## How reliable are the numbers
 The twin's component formulas were checked against 27 published data points from 8 independent sources (pump test, compressed-air fact sheets and a case study, lamp measurements, office cooling studies). Before any fitting, the median error was 13.6%, the mean 17.6% and the worst case 62.5% (cooling-setpoint savings, which are understated). This is a check against published component data, not a field validation of a plant. Reproduce it with `python -m wattloop.validation`; the Evidence panel lists every data point with its source link.
