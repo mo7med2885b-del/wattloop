@@ -10,6 +10,7 @@ const App = (() => {
   let running = false, runId = null, since = 0, timer = null, cost = 0, calls = 0, rej = 0, calSpec = null, autoCompare = true;
   let source = { type: "gallery", id: "demo" }, upload = null, imgOk = true, gallery = [];
   const calib = { twin: [], bill: 0 };
+  const detect = { obs: null, boxes: [] };
   const S = { hourA: [], hourB: [], partsA: {}, partsB: {}, hour: 6, shown: { a: 0, b: 0 }, lastHi: -1, result: null };
   const caption = (t, s) => { $("#capT").textContent = t; $("#capS").textContent = s; if (window.gsap && !reduce) gsap.fromTo("#caption", { opacity: .2, x: -12 }, { opacity: 1, x: 0, duration: .4 }); };
   const alog = (text, cls = "") => { const l = $("#alog"); if (l.firstChild && l.firstChild.textContent === "No events yet.") l.innerHTML = ""; const d = document.createElement("div"); d.className = "a " + cls; d.textContent = text; l.append(d); l.scrollTop = l.scrollHeight; };
@@ -131,13 +132,14 @@ const App = (() => {
   function handle(ev) {
     WF.apply(ev);
     switch (ev.type) {
-      case "run_start": S.caseName = ev.case.name; cost = 0; calls = 0; rej = 0; calib.twin = []; S.result = null; $("#calchart").innerHTML = ""; $("#fixes tbody").innerHTML = ""; $("#alog").innerHTML = ""; $("#decided").textContent = ""; $("#summary").textContent = "Running…"; $("#critic").textContent = ""; radar(null); alog("Run started"); caption("Reading your facility", "Photo, description and bill received."); break;
+      case "run_start": detect.obs = null; detect.boxes = []; updateBadge(); S.caseName = ev.case.name; cost = 0; calls = 0; rej = 0; calib.twin = []; S.result = null; $("#calchart").innerHTML = ""; $("#fixes tbody").innerHTML = ""; $("#alog").innerHTML = ""; $("#decided").textContent = ""; $("#summary").textContent = "Running…"; $("#critic").textContent = ""; radar(null); alog("Run started"); caption("Reading your facility", "Photo, description and bill received."); break;
       case "node_start": stepMark(ev.node, "act"); { const m = { scene: ["Checking the image", "Is it clearly a factory? Muse Spark vision looks first."], vision: ["Reading the equipment", "Muse Spark vision lists machines and waste signs."], segment: ["Locating equipment", "SAM 3.1 outlines each machine in the photo."], engineer: ["Building the twin", "Muse Spark writes a first-guess model as structured data."], calibrate: ["Calibrating to your bill", "Adjusting the uncertain parameters until the twin matches the bill."], hunt: ["Testing fixes in the twin", "Aggressive proposals first; code rejects what is impractical."], critic: ["Trying to refute the savings", "The Critic attacks the claim; code adds a sensitivity range."], report: ["Writing the engineer brief", "Only verified numbers are allowed in the text."] }[ev.node]; if (m) caption(...m); break; }
       case "node_done":
         stepMark(ev.node, "done");
         if (ev.node === "engineer" && ev.output && ev.output.spec) { renderBuild(ev.output.spec, "engineer draft", true); hideLoader(); const z = Array(24).fill(0); calSpec = ev.output.spec; Factory.setSpecs(ev.output.spec, ev.output.spec, {}, {}, z, z); refreshAll(); caption("Twin written", "Machines assemble from the model's structured output."); }
         calls += ev.calls || 0; cost += ev.usd || 0;
-        if (ev.node === "segment" && ev.output && ev.output.boxes) overlay(ev.output.boxes);
+        if (ev.node === "vision" && ev.output && ev.output.equipment) { detect.obs = ev.output; updateBadge(); }
+        if (ev.node === "segment" && ev.output && ev.output.boxes) { overlay(ev.output.boxes); detect.boxes = ev.output.boxes; updateBadge(); }
         if (ev.node === "scene") alog(ev.output && ev.output.ok ? "Scene check: " + (ev.output.subject || "factory") : "Scene check refused the image", ev.output && ev.output.ok ? "ok" : "bad"); break;
       case "loop": notify("l"); hideLoader(); renderBuild(ev.spec, "calibration " + ev.iter); calib.bill = ev.bill_kwh; calib.twin.push(ev.twin_kwh); drawCal(); calSpec = ev.spec; S.hourA = ev.hourly; S.hourB = ev.hourly; S.partsA = ev.parts; S.partsB = ev.parts;
         Factory.setSpecs(ev.spec, ev.spec, ev.parts, ev.parts, ev.hourly, ev.hourly); refreshAll(); $("#calnote").textContent = `Iteration ${ev.iter}: twin ${fmt(ev.twin_kwh)} vs bill ${fmt(ev.bill_kwh)} kWh (${ev.err_pct > 0 ? "+" : ""}${ev.err_pct}%)` + (Math.abs(ev.err_pct) <= 5 ? " · calibrated" : " · adjusting…");
@@ -158,6 +160,17 @@ const App = (() => {
     results.forEach((r) => { const tr = document.createElement("tr"); tr.className = r.status === "accepted" ? "ok" : "no"; tr.innerHTML = `<td>${r.fix.type.replace(/_/g, " ")}</td><td>${r.fix.target || (r.fix.kwp ? r.fix.kwp + " kWp" : "")}</td><td>${r.status === "accepted" ? "✓ " + fmt(r.saved_egp_year) + " EGP/yr" : "✗ " + r.reason}</td>`; tb.append(tr);
       if (r.status !== "accepted") { rej++; alog("Rejected: " + r.fix.type.replace(/_/g, " ") + ": " + r.reason, "bad"); if (window.gsap && !reduce) gsap.from(tr, { backgroundColor: "#ff4d3d", duration: .9 }); } });
     $("#fixnote").textContent = `Round ${round}: rejected fixes go back to the hunter with the reason.`;
+  }
+  function updateBadge() { const b = $("#seenBadge"), n = detect.boxes.length, m = detect.obs ? detect.obs.equipment.length : 0; b.hidden = !(n || m); b.textContent = `${m} items · ${n} regions · click`; }
+  function openSeen() {
+    $("#seen").hidden = false; const img = $("#seenImg"), svg = $("#seenSvg"), list = $("#seenList"); img.src = $("#photo").src; svg.innerHTML = "";
+    if (!detect.obs && !detect.boxes.length) { list.innerHTML = '<div class="sitem"><b>Nothing identified yet</b><span>Press Build the twin: Muse Spark vision names the equipment and SAM 3.1 outlines it. Then click here again.</span></div>'; return; }
+    const rects = detect.boxes.map((b, i) => { const [x1, y1, x2, y2] = b.box, r = el("rect", { x: x1, y: y1, width: x2 - x1, height: y2 - y1, fill: "rgba(255,106,0,.10)", stroke: "#ff6a00", "stroke-width": 3, "vector-effect": "non-scaling-stroke" }, svg); const t = el("text", { x: x1 + 6, y: y1 + 30, fill: "#ffb066", "font-size": 28, "font-weight": 700 }, svg); t.textContent = (i + 1) + " " + b.phrase; return r; });
+    const eq = (detect.obs ? detect.obs.equipment : []).map((e) => `<div class="sitem"><b>${e.phrase} <em>${e.kind}</em></b><span>${e.count ? e.count + " units · " : ""}${e.rating_kw ? e.rating_kw + " kW · " : ""}${e.evidence || ""}</span></div>`).join("");
+    const rg = detect.boxes.map((b, i) => `<div class="sitem" data-i="${i}"><b>${i + 1}. ${b.phrase}</b><span>located by SAM 3.1${b.kind ? " · " + b.kind : ""}</span></div>`).join("");
+    const signs = detect.obs && detect.obs.waste_signs && detect.obs.waste_signs.length ? `<h4>Waste signs Muse Spark noticed</h4>` + detect.obs.waste_signs.map((w) => `<div class="sitem"><span>${w}</span></div>`).join("") : "";
+    list.innerHTML = `<h4>Equipment named by Muse Spark vision</h4>${eq || "<div class='sitem'><span>none</span></div>"}<h4>Regions located by SAM 3.1 (click to highlight)</h4>${rg || "<div class='sitem'><span>none found</span></div>"}${signs}`;
+    list.querySelectorAll("[data-i]").forEach((n) => { const i = +n.dataset.i; const on = () => { rects.forEach((r, k) => { r.setAttribute("stroke-width", k === i ? 7 : 3); r.setAttribute("fill", k === i ? "rgba(255,106,0,.35)" : "rgba(255,106,0,.10)"); }); list.querySelectorAll(".sitem").forEach((x) => x.classList.toggle("on", x === n)); }; n.addEventListener("click", on); n.addEventListener("mouseenter", on); });
   }
   function overlay(boxes) { const o = $("#overlay"); o.innerHTML = ""; boxes.forEach((b) => { const [x1, y1, x2, y2] = b.box; el("rect", { x: x1, y: y1, width: x2 - x1, height: y2 - y1, fill: "rgba(255,106,0,.12)", stroke: "#ff6a00", "stroke-width": 3, "vector-effect": "non-scaling-stroke" }, o); el("text", { x: x1 + 6, y: y1 + 28, fill: "#ff9a4d", "font-size": 26, "font-weight": 700 }, o).textContent = b.phrase; }); }
   async function poll() { const r = await (await fetch(`/api/run/${runId}?since=${since}`)).json(); since = r.next; r.events.forEach((ev) => { try { handle(ev); } catch (e) { console.error("event handler failed", ev.type, e); } }); }
@@ -262,12 +275,20 @@ const App = (() => {
   }
   async function openEvidence() {
     $("#ev").hidden = false; const box = $("#evBody"); if (box.dataset.ready) return; box.textContent = "Loading…";
-    const d = await (await fetch("/api/evidence")).json(), L = d.legacy, C = d.current, comps = Object.keys(L.by_component);
-    box.innerHTML = `<div class="evh"><div><b>${L.median_abs_err_pct}%</b><span>median error vs published data (before fitting)</span></div><div><b>${L.mean_abs_err_pct}%</b><span>mean error</span></div><div><b>${L.n}</b><span>comparisons from ${d.independent_sources} independent sources</span></div><div><b>${L.worst_abs_err_pct}%</b><span>worst case (HVAC savings, understated)</span></div></div>
-      <p class="small muted">This checks the component formulas against published measurements. It is not a field validation of any plant. After fitting constants on the same points the in-sample median is ${C.median_abs_err_pct}%: do not quote that as accuracy.</p>
-      <table class="evt"><tr><th>Component</th><th>n</th><th>Median error (first version)</th><th>In-sample after fitting</th></tr>${comps.map((k) => `<tr><td>${k}</td><td>${L.by_component[k].n}</td><td>${L.by_component[k].median_abs_err_pct}%</td><td>${(C.by_component[k] || {}).median_abs_err_pct}%</td></tr>`).join("")}</table>
-      <h3 class="small" style="margin:8px 0 2px">Where each number comes from</h3><table class="evt"><tr><th>Item</th><th>Value</th><th>Basis</th><th>Status</th></tr>${d.provenance.map((p) => `<tr><td>${p.item}</td><td>${p.value}</td><td>${p.basis}</td><td class="st-${p.status.split(" ")[0]}">${p.status}</td></tr>`).join("")}</table>
-      <h3 class="small" style="margin:8px 0 2px">Limits we state openly</h3><ul class="evl">${d.limits.map((x) => `<li>${x}</li>`).join("")}</ul>`;
+    const d = await (await fetch("/api/evidence")).json(), L = d.legacy, C = d.current, comps = Object.keys(L.by_component), esc = (t) => String(t).replace(/</g, "&lt;");
+    const fmtV = (r, v) => (r.unit === "kWh/yr" ? Math.round(v).toLocaleString("en-US") + " kWh/yr" : (v * 100).toFixed(1) + "%");
+    const srcs = {}; L.rows.forEach((r) => { srcs[r.url] = r; });
+    box.innerHTML = `
+      <div class="evh"><div><b>${L.median_abs_err_pct}%</b><span>median error against published measurements (first version, before any fitting)</span></div><div><b>${L.mean_abs_err_pct}%</b><span>mean error</span></div><div><b>${L.n}</b><span>comparisons from ${d.independent_sources} independent published sources</span></div><div><b>${L.worst_abs_err_pct}%</b><span>worst case: HVAC setpoint savings (we understate them)</span></div></div>
+      <div class="evwhy"><div><b>What was tested</b>Each formula in the twin (pump power, compressor part-load, leak repair, LED power, cooling setpoint) was compared with a number measured or reported by someone else.</div><div><b>What the percentages mean</b>Error = (our model - published value) / published value. A median of ${L.median_abs_err_pct}% means half of the comparisons were within ${L.median_abs_err_pct}%.</div><div><b>What this is not</b>It is not a test on a real plant. No Egyptian before/after data was found. After fitting the constants on the same points the in-sample median is ${C.median_abs_err_pct}%; that figure is not accuracy and we do not quote it.</div></div>
+      <div class="evsec">Result by component</div>
+      <table class="evt"><tr><th>Component</th><th>n</th><th>Median error, first version</th><th>In-sample after fitting</th></tr>${comps.map((k) => `<tr><td>${k}</td><td class="num">${L.by_component[k].n}</td><td class="num ${L.by_component[k].median_abs_err_pct > 25 ? "bad" : ""}">${L.by_component[k].median_abs_err_pct}%</td><td class="num">${(C.by_component[k] || {}).median_abs_err_pct}%</td></tr>`).join("")}</table>
+      <div class="evsec">All ${L.n} data points<small>published value, our first-version model, error, and the source (links open the original)</small></div>
+      <div class="evscroll"><table class="evt"><tr><th>Component</th><th>Comparison</th><th>Published</th><th>Model</th><th>Error</th><th>Source</th></tr>${L.rows.map((r) => `<tr><td>${esc(r.component)}</td><td>${esc(r.label)}${r.note ? `<br><span class="muted">${esc(r.note)}</span>` : ""}</td><td class="num">${fmtV(r, r.published)}</td><td class="num">${fmtV(r, r.model)}</td><td class="num ${Math.abs(r.err_pct) > 25 ? "bad" : ""}">${r.err_pct > 0 ? "+" : ""}${r.err_pct.toFixed(1)}%</td><td><a href="${r.url}" target="_blank" rel="noopener">${esc(r.source)}</a><br><span class="${r.link_verified ? "ok" : "no"}">${r.link_verified ? "link opened, key numbers found in the page (2026-10-28)" : "link not re-checked by us (site blocked automated access)"}</span></td></tr>`).join("")}</table></div>
+      <div class="evsec">Where each constant in the model comes from</div>
+      <table class="evt"><tr><th>Item</th><th>Value</th><th>Basis</th><th>Status</th></tr>${d.provenance.map((p) => `<tr><td>${esc(p.item)}</td><td>${esc(p.value)}</td><td>${esc(p.basis)}</td><td class="st-${p.status.split(" ")[0]}">${esc(p.status)}</td></tr>`).join("")}</table>
+      <div class="evsec">Limits we state openly</div><ul class="evl">${d.limits.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+      <p class="small muted">Reproduce every number above: <code>python -m wattloop.validation</code> (test: <code>tests/test_validation.py</code>). Sources are listed above with their links; the research notes with exact page quotes are kept in the project notes.</p>`;
     box.dataset.ready = "1";
   }
   async function init() {
@@ -277,6 +298,7 @@ const App = (() => {
     document.querySelectorAll("#scenes button").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.m)));
     $("#toggleL").addEventListener("click", () => setSide("l", !collapsed.l)); $("#toggleR").addEventListener("click", () => setSide("r", !collapsed.r));
     try { if (localStorage.getItem("wl-side-l") === "1") setSide("l", true); if (localStorage.getItem("wl-side-r") === "1") setSide("r", true); } catch (e) { /* ignore */ }
+    $(".photo").addEventListener("click", openSeen); $("#seenClose").addEventListener("click", () => { $("#seen").hidden = true; }); $("#seen").addEventListener("click", (e) => { if (e.target.id === "seen") $("#seen").hidden = true; });
     $("#pdfBtn").addEventListener("click", () => Report.download({ result: S.result, specBefore: calSpec, billKwh: +$("#bill").value, caseName: (S.caseName || "Facility") }));
     $("#evBtn").addEventListener("click", openEvidence); $("#evClose").addEventListener("click", () => { $("#ev").hidden = true; }); $("#ev").addEventListener("click", (e) => { if (e.target.id === "ev") $("#ev").hidden = true; });
     $("#run").addEventListener("click", start); $("#wfOpen").addEventListener("click", () => WF.open()); $("#demoBtn").addEventListener("click", demo); $("#overview").addEventListener("click", () => Factory.focus(null));

@@ -25,6 +25,20 @@ SOURCES = {
 }
 
 
+URLS = {
+    "P1": "https://www.plantservices.com/equipment/electrical-systems/article/11344155/energy-efficiency-pump-energy-savings-with-vfds-plant-services",
+    "C1": "https://www.compressedairchallenge.org/data/sites/1/media/library/factsheets2026/fact-sheet-6-compressed-air-system-controls_updated2026.pdf",
+    "C2": "https://www.fluidpowerworld.com/will-a-vsd-compressor-save-me-money/", "C3": "https://www.fluidpowerworld.com/will-a-vsd-compressor-save-me-money/",
+    "L1": "https://www.dteenergy.com/content/dam/dteenergy/deg/website/business/energy-efficiency/pdf/DTE-FFCA-CaseStudy-Fastening-2022.pdf",
+    "LT1": "https://www1.eere.energy.gov/buildings/publications/pdfs/ssl/gateway_t8-replacement.pdf",
+    "H1": "https://researchers.mq.edu.au/en/publications/a-preliminary-evaluation-of-two-strategies-for-raising-indoor-air/",
+    "H2": "https://research.uga.edu/news/turn-up-the-thermostat-lower-energy-costs-no-complaints/",
+    "H4": "https://escholarship.org/uc/item/13s1q2xc",
+}
+# links opened and the key numbers found in the page text on 2026-10-28 (H4: the host returned a bot challenge, so the link was not re-checked by us)
+LINK_VERIFIED = {"P1": True, "C1": True, "C2": True, "C3": True, "L1": True, "LT1": True, "H1": True, "H2": True, "H4": False}
+
+
 def _pump(f: float, vsd: bool, s: float = 0.3) -> float:
     return twin.component_power_kw({"type": "pump", "count": 1, "rated_kw": 1.0, "flow_demand": f, "vsd": vsd, "static_share": s}, {**twin.PARAMS})
 
@@ -43,7 +57,7 @@ def _rows(model: str) -> list[dict]:
     rows: list[dict] = []
 
     def add(id_, comp, label, pub, mod, note=""):
-        rows.append({"id": id_, "component": comp, "label": label, "published": pub, "model": mod, "err_pct": (mod - pub) / pub * 100 if pub else 0.0, "source": SOURCES[id_.split("-")[0]], "note": note})
+        rows.append({"id": id_, "component": comp, "label": label, "published": pub, "model": mod, "err_pct": (mod - pub) / pub * 100 if pub else 0.0, "source": SOURCES[id_.split("-")[0]], "url": URLS[id_.split("-")[0]], "link_verified": LINK_VERIFIED[id_.split("-")[0]], "unit": "kWh/yr" if id_ == "L1" else "ratio", "note": note})
 
     cur = model == "current"
     for f, thr in zip(FLOWS, THROTTLED):
