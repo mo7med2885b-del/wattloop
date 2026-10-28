@@ -165,17 +165,17 @@ const WF = (() => {
     if (id === "verify") add(ul, "li", `${o.accepted || 0} accepted, ${o.rejected || 0} rejected this round`);
     if (id === "critic") (o.challenges || []).forEach((c) => add(ul, "li", `${c.concern} (${c.severity})`));
     if (id === "report") add(ul, "li", "Brief written from verified numbers only");
-    if (id === "gate") add(ul, "li", "The engineer approves, modifies or rejects. Nothing is final without this step.");
+    if (id === "gate") { add(ul, "li", "The engineer approves, modifies or rejects. Nothing is final without this step."); if (gateResult) { const b = add(box, "button", "Open the decision card", "wf-cptoggle"); b.type = "button"; b.addEventListener("click", cpOpen); } }
     add(box, "div", `${r.model ? pretty(r.model) : "Code, no model"}${r.ms ? " · " + (r.ms / 1000).toFixed(1) + " s" : ""}${r.usd ? " · $" + Number(r.usd).toFixed(5) : ""}${r.fallback ? " · fallback" + (r.note ? " (" + r.note + ")" : "") : ""}`, "meta");
   }
 
   function apply(ev) {
     switch (ev.type) {
-      case "run_start": resetStates(); t0 = performance.now() / 1000; $$("wfCaseTitle").textContent = ev.case.name; status("Running", "run"); startBreathing(); log("Workflow started"); icons.intake && 0; break;
-      case "node_start": { const g = nodes[ev.node]; if (!g) break; g.classList.add("thinking"); icons[ev.node] && icons[ev.node].think(true); (INLINES[ev.node] || []).forEach((l, i) => { lines[l].classList.add("live"); pulse(l, "", 0.8, false, i * 0.06); });
+      case "run_start": gateResult = null; $$("wfCp").hidden = true; STEPS.forEach((n) => stepMark(n, "")); $$("wfLeft").classList.remove("alert"); resetStates(); t0 = performance.now() / 1000; $$("wfCaseTitle").textContent = ev.case.name; status("Running", "run"); startBreathing(); log("Workflow started"); icons.intake && 0; break;
+      case "node_start": { if (STEPS.includes(ev.node)) stepMark(ev.node, "act"); const g = nodes[ev.node]; if (!g) break; g.classList.add("thinking"); icons[ev.node] && icons[ev.node].think(true); (INLINES[ev.node] || []).forEach((l, i) => { lines[l].classList.add("live"); pulse(l, "", 0.8, false, i * 0.06); });
         if (ev.node === "intake") pulse("intake", "", 0.6); log(ev.label || nameOf(ev.node)); break; }
       case "node_done": {
-        const id = ev.node, g = nodes[id]; if (!g) break; results[id] = ev; g.classList.remove("thinking"); icons[id] && (icons[id].think(false), icons[id].done());
+        const id = ev.node, g = nodes[id]; if (!g) break; results[id] = ev; if (STEPS.includes(id)) stepMark(id, "done"); if (id === "design" && $$("wf").classList.contains("lc")) $$("wfLeft").classList.add("alert"); g.classList.remove("thinking"); icons[id] && (icons[id].think(false), icons[id].done());
         const bad = ev.output && (ev.output.error || ev.output.ok === false); g.classList.add("done", ev.fallback ? "st-warn" : bad ? "st-bad" : (DEF.find((d) => d[0] === id) || [])[3] === "code" ? "st-code" : "st-against"); pop(id);
         g.querySelector(".wf-stance").textContent = summarize(id, ev);
         if (ev.model) { const mn = g.querySelector(".wf-mname"); if (mn) mn.textContent = pretty(ev.model); }
@@ -188,12 +188,12 @@ const WF = (() => {
         pulse("hunt_verify", "", 0.7); setTimeout(() => pulse("verify_hunt", "back", 0.7, false), 750);
         ev.results.forEach((r) => { if (r.status === "rejected") { rej += 1; $$("tRej").textContent = String(rej); lines.verify_hunt.classList.add("warn"); log(`Rejected ${r.fix.type.replace(/_/g, " ")}: ${r.reason}`, "bad"); } else log(`Verified ${r.fix.type.replace(/_/g, " ")} (${Math.round(r.saved_egp_year).toLocaleString()} EGP/yr)`, "ok"); });
         if (!rej) $$("tRej").textContent = "0"; break; }
-      case "gate": {
+      case "gate": { gateResult = ev.result; setTimeout(cpOpen, 900);
         const r = ev.result, e = r.evaluation; nodes.gate.classList.remove("thinking"); nodes.gate.classList.add("waiting"); icons.gate.think(true); stopBreathing(); pulse("final", "final", 1.3); pulse("report_gate", "human", 0.7);
         status("Waiting for engineer", "wait"); $$("tSave").textContent = Math.round(e.saved_egp_year).toLocaleString() + " EGP/yr · " + r.arbiter.level;
         const b = $$("wfBrief"); b.hidden = false; b.replaceChildren(); add(b, "h4", "Orchestrator brief"); add(b, "div", r.summary); add(b, "div", `Confidence ${r.arbiter.level} (${r.arbiter.confidence_score}) · range ${Math.round(r.arbiter.range_egp_year[0]).toLocaleString()}–${Math.round(r.arbiter.range_egp_year[1]).toLocaleString()} EGP/yr`, "row");
         log("Verified plan ready: requires engineer review", "human"); break; }
-      case "decision": nodes.gate.classList.remove("waiting"); nodes.gate.classList.add("done", "st-human"); icons.gate.think(false); icons.gate.done(); nodes.gate.querySelector(".wf-stance").textContent = ev.action.toUpperCase(); status("Engineer: " + ev.action, ""); log(`Engineer decision: ${ev.action}`, "human"); break;
+      case "decision": $$("wfCp").hidden = true; nodes.gate.classList.remove("waiting"); nodes.gate.classList.add("done", "st-human"); icons.gate.think(false); icons.gate.done(); nodes.gate.querySelector(".wf-stance").textContent = ev.action.toUpperCase(); status("Engineer: " + ev.action, ""); log(`Engineer decision: ${ev.action}`, "human"); break;
       case "rejected": nodes.scene.classList.remove("thinking"); nodes.scene.classList.add("rejected"); stopBreathing(); status("Stopped: not a factory", "wait"); $$("tSave").textContent = "Image refused"; log("Scene Check refused the image: " + ev.reason, "bad"); break;
       case "cancelled": stopBreathing(); Object.values(nodes).forEach((g) => { g.classList.remove("thinking", "waiting"); }); status("Cancelled", "wait"); $$("tSave").textContent = "Cancelled"; log("Workflow cancelled: no further model calls", "bad"); break;
       case "error": log("Stopped: " + ev.message, "bad"); status("Stopped", "wait"); break;
@@ -206,13 +206,38 @@ const WF = (() => {
     box.textContent = "Thinking…"; $$("wfQ").value = "";
     try { const r = await (await fetch(`/api/run/${App.runId()}/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q }) })).json(); box.textContent = r.answer; } catch (err) { box.textContent = "Could not reach the server."; }
   }
-  function open() { $$("wf").hidden = false; document.body.style.overflow = "hidden"; }
-  function close() { $$("wf").hidden = true; document.body.style.overflow = ""; }
+  // the live 3D view: the same canvas is moved into the left panel while the workflow is open
+  let isoHome = null, gateResult = null;
+  function mountView() { const iso = document.getElementById("iso"), v = $$("wfView"); if (!iso || !v || v.contains(iso)) return; isoHome = { parent: iso.parentElement, next: iso.nextSibling }; v.appendChild(iso); }
+  function unmountView() { const iso = document.getElementById("iso"); if (!iso || !isoHome || isoHome.parent.contains(iso)) return; isoHome.parent.insertBefore(iso, isoHome.next); }
+  function open() { $$("wf").hidden = false; document.body.style.overflow = "hidden"; mountView(); }
+  function close() { $$("wf").hidden = true; document.body.style.overflow = ""; unmountView(); }
+  const STEPS = ["scene", "vision", "segment", "engineer", "design"];
+  function stepMark(n, cls) { const li = document.querySelector(`#wfSteps li[data-n="${n}"]`); if (li) li.className = cls; }
+  const money = (n) => Math.round(+n || 0).toLocaleString("en-US");
+  const fixTitle = (f) => ({ vsd_pump: "Variable-speed drive on pumps", repair_leaks: "Repair compressed-air leaks", led_retrofit: "LED lighting retrofit", lighting_controls: "Lighting controls", hvac_setpoint: "Raise cooling setpoint", standby_shutdown: "Auto shut-down of idle machines", solar_pv: "Rooftop solar PV" }[f.type] || f.type);
+  function cpOpen() {
+    const r = gateResult; if (!r) return; const e = r.evaluation, a = r.arbiter, d = r.plan_detail || [];
+    $$("cpLead").textContent = `WattLoop tested ${r.plan.length} fixes in the twin and kept the ones that passed the safety checks. Nothing is final until you decide. All figures are simulated estimates, not measurements.`;
+    $$("cpNums").innerHTML = [[money(e.saved_egp_year) + " EGP/yr", "simulated saving"], [money(e.saved_kwh_month) + " kWh/mo", "energy saved"], [e.payback_months == null ? "n/a" : e.payback_months + " months", "payback (placeholder costs)"], [a.level + " (" + a.confidence_score + ")", money(a.range_egp_year[0]) + " to " + money(a.range_egp_year[1]) + " EGP/yr"]].map(([b, s]) => `<div><b>${b}</b><span>${s}</span></div>`).join("");
+    $$("cpFixes").innerHTML = d.length ? d.map((x) => `<div class="cp-row ok">${fixTitle(x.fix)} - saves ${money(x.saved_egp_year)} EGP/yr, costs about ${money(x.capex_egp)} EGP (estimate)</div>`).join("") : r.plan.map((f) => `<div class="cp-row ok">${fixTitle(f)}</div>`).join("");
+    const w = ((r.critic && r.critic.challenges) || []).slice(0, 4).map((c) => `<div class="cp-row">${String(c.concern).replace(/</g, "&lt;")} (${c.severity})</div>`).join("");
+    $$("cpWatch").innerHTML = w + '<div class="cp-row">Cost figures are placeholders: get supplier quotes. Confirm equipment ratings and operating hours on site.</div>';
+    $$("cpMsg").textContent = ""; $$("wfCp").hidden = false;
+  }
+  async function cpDecide(action) {
+    const note = $$("cpNote").value.trim(), who = $$("cpWho").value.trim();
+    if ((action === "modify" || action === "reject") && note.length < 3) { $$("cpMsg").textContent = "Add a short note: it is required for Modify and Reject."; return; }
+    $$("cpMsg").textContent = "Recording your decision…"; await App.decide(action, (who ? who + ": " : "") + note);
+  }
   function init() {
     build();
     $$("wfOpen").addEventListener("click", open); $$("wfClose").addEventListener("click", close); $$("wfHome").addEventListener("click", close);
     $$("wfRun").addEventListener("click", () => { App.start(); });  // starts a run, or cancels the active one
     $$("wfReset").addEventListener("click", resetLayout); $$("wfZin").addEventListener("click", () => zoomAt(500, 400, 1.2)); $$("wfZout").addEventListener("click", () => zoomAt(500, 400, 1 / 1.2));
+    $$("wfLtoggle").addEventListener("click", () => { const c = $$("wf").classList.toggle("lc"); $$("wfLtoggle").innerHTML = c ? "&rsaquo;" : "&lsaquo;"; if (!c) $$("wfLeft").classList.remove("alert"); });
+    $$("cpHide").addEventListener("click", () => { $$("wfCp").hidden = true; }); $$("cpPdf").addEventListener("click", () => { $$("cpPdf").dispatchEvent(new CustomEvent("pdf", { bubbles: true })); document.getElementById("pdfBtn").click(); });
+    document.querySelectorAll(".cp-actions [data-a]").forEach((b) => b.addEventListener("click", () => cpDecide(b.dataset.a)));
     $$("wfAsk").addEventListener("submit", ask); document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$$("wf").hidden) close(); });
   }
   return { init, apply, open, close, setModel(m) { $$("wfModel").textContent = m; $$("wfAskModel").textContent = m; } };

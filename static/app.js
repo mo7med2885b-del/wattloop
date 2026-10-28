@@ -316,5 +316,9 @@ const App = (() => {
     caption("Energy twin", "Press Demo for an instant pre-computed twin, or Build the twin for a live run.");
   }
   init();
-  return { runId: () => runId, start, cancel, isRunning: () => running };
+  async function decide(action, note) {
+    if (!runId) return; const r = await fetch(`/api/run/${runId}/decision`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, note }) });
+    if (r.ok) { $("#decided").textContent = "Engineer decision recorded: " + action + (note ? " (" + note.slice(0, 60) + ")" : ""); alog("Engineer: " + action, action === "approve" ? "ok" : ""); await poll(); }
+  }
+  return { runId: () => runId, start, cancel, decide, isRunning: () => running };
 })();

@@ -96,6 +96,10 @@
     <button class="wf-close" id="wfClose" type="button" aria-label="Close">×</button>
   </header>
   <div class="wf-main">
+    <aside class="wf-left glass" id="wfLeft"><div class="wf-lhead"><b>Live 3D model</b><button id="wfLtoggle" type="button" title="Collapse or expand this panel">&lsaquo;</button><i class="wf-dot"></i></div>
+      <div class="wf-lbody"><div class="wf-view" id="wfView"></div>
+        <ol class="lsteps wfsteps" id="wfSteps"><li data-n="scene">Scene Check</li><li data-n="vision">Vision reading (Muse Spark)</li><li data-n="segment">Segmenter (SAM 3.1)</li><li data-n="engineer">Twin written</li><li data-n="design">3D layout designed</li></ol>
+        <div class="muted small" id="wfLnote">The plant appears here as the models build it. Drag to rotate.</div></div></aside>
     <div class="wf-stage"><svg id="wfSvg" viewBox="0 -10 1000 960" preserveAspectRatio="xMidYMid meet"></svg>
       <div class="wf-legend"><span><i class="ai"></i>Muse model agent</span><span><i class="code"></i>Code, no model</span><span><i class="human"></i>Engineer checkpoint</span></div>
       <button class="wf-reset" id="wfReset" type="button">Reset layout</button>
@@ -121,6 +125,17 @@
     </aside>
   </div>
 </div>
+
+<div class="wf-cp" id="wfCp" hidden><div class="cp-card" role="dialog" aria-label="Engineer decision">
+  <div class="cp-top"><span class="cp-step">ENGINEER CHECKPOINT · YOUR DECISION</span><button class="cp-hide" id="cpHide" type="button">Hide</button></div>
+  <h3>Decide what happens with this plan</h3>
+  <p class="cp-lead" id="cpLead"></p><div class="cp-nums" id="cpNums"></div>
+  <div class="cp-list"><h5>Fixes in the plan</h5><div id="cpFixes"></div></div>
+  <div class="cp-list"><h5>Check on site before spending anything</h5><div id="cpWatch"></div></div>
+  <div class="cp-list"><h5>What each button does</h5><div class="cp-what"><span><b>Approve</b> record the plan as accepted and schedule a site audit to verify it.</span><span><b>Modify</b> keep the plan but record your changes (note required).</span><span><b>Reject</b> discard the plan and record why (note required).</span></div></div>
+  <input id="cpWho" autocomplete="off" placeholder="Your name (optional)"><textarea id="cpNote" rows="2" autocomplete="off" placeholder="Note or reason (required for Modify and Reject)"></textarea>
+  <div class="cp-actions"><button type="button" class="cp-ok" data-a="approve">Approve for site audit</button><button type="button" data-a="modify">Modify</button><button type="button" class="cp-no" data-a="reject">Reject</button><button type="button" id="cpPdf">Download PDF report</button></div><div class="cp-msg" id="cpMsg"></div>
+</div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
