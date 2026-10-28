@@ -7,7 +7,7 @@ const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
 const TITLES = { pump: "PUMPS", compressor: "AIR", motors: "BELTS", hvac: "COOL", lighting: "LIGHT", standby: "IDLE", pv: "SOLAR" };
 
 const App = (() => {
-  let runId = null, since = 0, timer = null, cost = 0, calls = 0, rej = 0, calSpec = null, autoCompare = true;
+  let running = false, runId = null, since = 0, timer = null, cost = 0, calls = 0, rej = 0, calSpec = null, autoCompare = true;
   let source = { type: "gallery", id: "demo" }, upload = null, imgOk = true, gallery = [];
   const calib = { twin: [], bill: 0 };
   const S = { hourA: [], hourB: [], partsA: {}, partsB: {}, hour: 6, shown: { a: 0, b: 0 }, lastHi: -1, result: null };
@@ -125,7 +125,9 @@ const App = (() => {
       case "gate": showResult(ev.result); Factory.setSpecs(calSpec, ev.result.spec_after, S.partsA, S.partsB, S.hourA, S.hourB); refreshAll(); caption("Verified in the twin", "Simulated estimates. An engineer must review before any action."); alog(`Plan verified: ${fmt(ev.result.evaluation.saved_egp_year)} EGP/yr (simulated)`, "ok"); if (autoCompare) { autoCompare = false; setMode("compare"); } break;
       case "decision": $("#decided").textContent = "Engineer decision recorded: " + ev.action; alog("Engineer: " + ev.action, ev.action === "approve" ? "ok" : ""); break;
       case "rejected": caption("Image refused", ev.reason); imgStatus("bad", "Not processed: " + ev.reason); alog("Image refused: " + ev.reason, "bad"); $("#summary").textContent = "No analysis: the image is not a factory."; break;
-      case "done": $("#run").disabled = false; clearInterval(timer); break;
+      case "cancelled": caption("Run cancelled", "No further model calls will be made."); alog("Run cancelled by you", "bad"); $("#summary").textContent = "Cancelled."; break;
+      case "error": alog("Stopped: " + ev.message, "bad"); caption("Run stopped", ev.message); break;
+      case "done": setRunning(false); clearInterval(timer); break;
     }
     $("#stat").textContent = `${calls} model calls · $${cost.toFixed(4)}`;
   }
@@ -175,13 +177,23 @@ const App = (() => {
     $("#galGrid").innerHTML = gallery.map((g) => `<button class="gi" data-id="${g.id}" type="button"><img loading="lazy" src="${g.file}" alt=""><span>${g.title}</span><small>illustrative bill ${fmt(g.bill_kwh)} kWh/month</small></button>`).join("");
     $("#galGrid").querySelectorAll(".gi").forEach((b) => b.addEventListener("click", () => pickGallery(gallery.find((g) => g.id === b.dataset.id))));
   }
+  function setRunning(on) {
+    running = on; const b = $("#run"); b.disabled = false; b.textContent = on ? "Cancel run" : "Build the twin"; b.classList.toggle("danger", on);
+    const w = $("#wfRun"); if (w) { w.textContent = on ? "Stop workflow" : "Run workflow"; w.disabled = false; w.classList.toggle("danger", on); }
+  }
+  async function cancel() {
+    if (!runId || !running) return; clearInterval(timer); setRunning(false);
+    try { const r = await fetch(`/api/run/${runId}/cancel`, { method: "POST" }); await r.json(); await poll(); } catch (e) { /* the server drops later events anyway */ }
+    WF.apply({ type: "cancelled" }); handle({ type: "cancelled" });
+  }
   async function start() {
+    if (running) { cancel(); return; }
     const bill = +$("#bill").value; if (!(bill > 0)) { imgStatus("bad", "Enter the monthly electricity bill in kWh."); return; }
     if (source.type === "upload" && !imgOk) { imgStatus("bad", "This image was not accepted. Choose a factory photo."); return; }
-    $("#run").disabled = true; since = 0; autoCompare = true; setMode("now"); Factory.focus(null);
+    setRunning(true); since = 0; autoCompare = true; setMode("now"); Factory.focus(null);
     const body = source.type === "gallery" ? { gallery_id: source.id, description: $("#desc").value, bill_kwh: bill } : { image_b64: upload, description: $("#desc").value, bill_kwh: bill };
     const r = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    if (!r.ok) { $("#run").disabled = false; let m = "Could not start."; try { m = (await r.json()).detail || m; } catch (e) { /* ignore */ } imgStatus("bad", m); return; }
+    if (!r.ok) { setRunning(false); let m = "Could not start."; try { m = (await r.json()).detail || m; } catch (e) { /* ignore */ } imgStatus("bad", m); return; }
     runId = (await r.json()).run_id; clearInterval(timer); timer = setInterval(poll, 500); poll();
   }
   function setMode(m) { Factory.setMode(m); document.querySelectorAll("#scenes button").forEach((b) => b.classList.toggle("on", b.dataset.m === m)); refreshAll(); }
@@ -204,5 +216,5 @@ const App = (() => {
     caption("Energy twin", "Press Demo for an instant pre-computed twin, or Build the twin for a live run.");
   }
   init();
-  return { runId: () => runId, start };
+  return { runId: () => runId, start, cancel, isRunning: () => running };
 })();

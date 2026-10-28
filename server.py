@@ -160,6 +160,9 @@ def start(req: RunReq):
         if not image and not (req.description or "").strip():
             raise HTTPException(400, "add a photo or a description")
         case.update(description=(req.description or "")[:2000], bill_kwh=req.bill_kwh, name="Your facility")
+    active = [r for r in RUNS.values() if not r.finished and not r.closed]
+    if len(active) >= 2:
+        raise HTTPException(429, "Two runs are already active. Cancel one or wait for it to finish.")
     run = pipeline.Run(case, image)
     RUNS[run.id] = run
     threading.Thread(target=pipeline.execute, args=(run,), daemon=True).start()
@@ -172,6 +175,15 @@ def poll(rid: str, since: int = 0):
     if not run:
         raise HTTPException(404)
     return {"events": run.since(since), "next": since + len(run.since(since)), "decision": run.decision}
+
+
+@app.post("/api/run/{rid}/cancel")
+def cancel(rid: str):
+    run = RUNS.get(rid)
+    if not run:
+        raise HTTPException(404)
+    pipeline.cancel_run(run)
+    return {"cancelled": True}
 
 
 @app.post("/api/run/{rid}/decision")

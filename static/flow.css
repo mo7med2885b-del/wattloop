@@ -123,3 +123,4 @@
 .wf-node.rejected .wf-card{stroke:#ff6b5a}
 .wf-node.st-warn{--st:#ffc857}.wf-node.st-bad{--st:#ff6b5a}
 .wf .wf-reset{left:10px}
+.wf-run.danger{background:linear-gradient(135deg,#ff6a5a,#e23d2d);color:#fff}

@@ -37,7 +37,10 @@ class Run:
         self.image = image
         self.events: list[dict] = []
         self.lock = threading.Lock()
-        self.budget = meta.Budget()
+        self.cancel = threading.Event()
+        self.closed = False
+        self.finished = False
+        self.budget = meta.Budget(cancel=self.cancel)
         self.cost = 0.0
         self.calls = 0
         self.result: dict | None = None
@@ -46,6 +49,8 @@ class Run:
 
     def emit(self, type_: str, **data):
         with self.lock:
+            if self.closed:   # after a cancel nothing more reaches the UI
+                return
             self.events.append({"n": len(self.events), "t": round(time.time() - self.t0, 2), "type": type_, **data})
 
     def since(self, n: int) -> list[dict]:
@@ -54,10 +59,16 @@ class Run:
 
     def step(self, node: str, fn, label: str = ""):
         """Run one agent; emit node_start / node_done with model, latency, cost, fallback flag."""
+        if self.cancel.is_set():
+            raise meta.BudgetExceeded("cancelled")
         self.emit("node_start", node=node, label=label)
         t0 = time.time()
         try:
             out, info = fn()
+        except meta.BudgetExceeded as e:
+            if self.cancel.is_set():
+                raise
+            out, info = {"error": f"budget: {e}"}, {"fallback": True, "model": None, "note": str(e)}
         except Exception as e:  # noqa: BLE001  (last resort: never crash the run)
             out, info = {"error": f"{type(e).__name__}: {e}"}, {"fallback": True, "model": None}
         info.setdefault("model", None)
@@ -188,7 +199,9 @@ def calibrate_loop(run: Run, spec: dict, bill: float):
     t0 = time.time()
     usd, calls, model, fallback = 0.0, 0, None, False
     err = 100.0
-    for it in range(1, 6):
+    for it in range(1, 6):   # hard cap: 5 iterations, at most 4 model calls
+        if run.cancel.is_set():
+            break
         kwh = twin.monthly_kwh(spec)
         err = (kwh - bill) / bill * 100
         run.emit("loop", name="calibration", iter=it, twin_kwh=round(kwh), bill_kwh=round(bill), err_pct=round(err, 1),
@@ -242,7 +255,9 @@ def hunt_and_verify(run: Run, spec: dict):
     accepted: list[dict] = []
     feedback = ""
     plan: list[dict] = []
-    for rnd in range(1, 4):
+    for rnd in range(1, 4):   # hard cap: 3 rounds, at most 3 model calls
+        if run.cancel.is_set():
+            break
         proposals: list[dict] = []
         if meta.available():
             try:
@@ -394,7 +409,7 @@ def scene_check(budget: meta.Budget, image: bytes) -> dict:
 
 
 # ---------------------------------------------------------------- orchestrator
-def execute(run: Run):
+def _execute(run: Run):
     case = run.case
     run.emit("run_start", case={"bill_kwh": case["bill_kwh"], "name": case.get("name", "Facility"), "has_photo": bool(run.image)})
     run.step("intake", lambda: ({"description": case["description"][:400], "bill_kwh": case["bill_kwh"], "shift": case["shift"], "image": "gallery" if case.get("trusted_image") else "upload" if run.image else "none"}, {"fallback": False}), "Photo, description, bill")
@@ -451,3 +466,28 @@ def _safe(fn, fb):
         return fn()
     except Exception:  # noqa: BLE001
         return fb()
+
+
+def execute(run: Run):
+    """Run the pipeline in its own thread. Whatever happens, the run ends with a 'done' event and the thread exits."""
+    try:
+        _execute(run)
+    except meta.BudgetExceeded as e:
+        if not run.cancel.is_set():
+            run.emit("error", message=f"Stopped by the guard: {e}")
+            run.emit("done", cost_usd=round(run.cost, 4), calls=run.calls, seconds=round(time.time() - run.t0, 1), guard=str(e))
+    except Exception as e:  # noqa: BLE001
+        run.emit("error", message=f"{type(e).__name__}: {e}")
+        run.emit("done", cost_usd=round(run.cost, 4), calls=run.calls, seconds=round(time.time() - run.t0, 1))
+    finally:
+        run.finished = True
+
+
+def cancel_run(run: Run):
+    """Cancel button: no further model call can start; the UI is told immediately and later events are dropped."""
+    if run.finished or run.closed:
+        return
+    run.cancel.set()
+    run.emit("cancelled")
+    run.emit("done", cost_usd=round(run.cost, 4), calls=run.calls, seconds=round(time.time() - run.t0, 1), cancelled=True)
+    run.closed = True

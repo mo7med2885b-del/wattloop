@@ -31,18 +31,23 @@ PRICE_IN, PRICE_OUT = 0.15, 0.50  # USD per million tokens (Muse Spark 1.3 rate 
 SAM_USD = 0.0025  # $2.50 per 1,000 images (docs/research/meta-models.md)
 
 
+_GLOBAL: list[float] = []
+
+
 class BudgetExceeded(RuntimeError):
     pass
 
 
 class Budget:
-    """Per-run call cap, per-minute cap and a daily USD cap. Never weaken."""
+    """Per-run call cap, per-run time limit, per-minute caps (run and global), daily call and USD caps, kill switch and cancel. Never weaken."""
 
-    def __init__(self, max_calls: int | None = None):
+    def __init__(self, max_calls: int | None = None, cancel: "threading.Event | None" = None, seconds: float | None = None):
         self.max_calls = max_calls or int(env("MAX_MODEL_CALLS_PER_RUN", "40"))
         self.calls = 0
         self.usd = 0.0
         self.stamps: list[float] = []
+        self.cancel = cancel                      # set by the Cancel button: no further model call may start
+        self.deadline = time.time() + (seconds or float(env("MAX_RUN_SECONDS", "300")))  # hard wall-clock limit per run
 
     def _day(self) -> dict:
         today = time.strftime("%Y-%m-%d")
@@ -56,16 +61,27 @@ class Budget:
         with _lock:
             if env("KILL_SWITCH") == "1":
                 raise BudgetExceeded("kill switch is on")
+            if self.cancel is not None and self.cancel.is_set():
+                raise BudgetExceeded("cancelled")
             now = time.time()
+            if now > self.deadline:
+                raise BudgetExceeded("run time limit reached")
+            _GLOBAL[:] = [t for t in _GLOBAL if now - t < 60]   # shared by every run, check and chat in this process
+            if len(_GLOBAL) >= int(env("MAX_MODEL_CALLS_PER_MINUTE", "60")):
+                raise BudgetExceeded("global per-minute call cap reached")
             self.stamps = [t for t in self.stamps if now - t < 60]
             if self.calls >= self.max_calls:
                 raise BudgetExceeded(f"run call cap {self.max_calls} reached")
             if len(self.stamps) >= 40:
                 raise BudgetExceeded("per-minute call cap reached")
-            if self._day()["usd"] >= float(env("MAX_SPEND_USD_PER_DAY", "3.00")):
+            day = self._day()
+            if day["usd"] >= float(env("MAX_SPEND_USD_PER_DAY", "3.00")):
                 raise BudgetExceeded("daily spend cap reached")
+            if day.get("calls", 0) >= int(env("MAX_MODEL_CALLS_PER_DAY", "600")):
+                raise BudgetExceeded("daily call cap reached")
             self.calls += 1
             self.stamps.append(now)
+            _GLOBAL.append(now)
 
     def record(self, usd: float):
         with _lock:

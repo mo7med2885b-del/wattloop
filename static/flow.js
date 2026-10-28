@@ -192,7 +192,9 @@ const WF = (() => {
         log("Verified plan ready: requires engineer review", "human"); break; }
       case "decision": nodes.gate.classList.remove("waiting"); nodes.gate.classList.add("done", "st-human"); icons.gate.think(false); icons.gate.done(); nodes.gate.querySelector(".wf-stance").textContent = ev.action.toUpperCase(); status("Engineer: " + ev.action, ""); log(`Engineer decision: ${ev.action}`, "human"); break;
       case "rejected": nodes.scene.classList.remove("thinking"); nodes.scene.classList.add("rejected"); stopBreathing(); status("Stopped: not a factory", "wait"); $$("tSave").textContent = "Image refused"; log("Scene Check refused the image: " + ev.reason, "bad"); break;
-      case "done": stopBreathing(); if (!ev.rejected) status($$("wfStatus").className.includes("wait") ? $$("wfStatus").textContent : "Done", $$("wfStatus").className.includes("wait") ? "wait" : ""); Object.values(nodes).forEach((g) => g.classList.remove("thinking")); $$("wfRun").disabled = false; $$("wfRun").textContent = "Run again"; break;
+      case "cancelled": stopBreathing(); Object.values(nodes).forEach((g) => { g.classList.remove("thinking", "waiting"); }); status("Cancelled", "wait"); $$("tSave").textContent = "Cancelled"; log("Workflow cancelled: no further model calls", "bad"); break;
+      case "error": log("Stopped: " + ev.message, "bad"); status("Stopped", "wait"); break;
+      case "done": stopBreathing(); if (!ev.rejected) status($$("wfStatus").className.includes("wait") ? $$("wfStatus").textContent : "Done", $$("wfStatus").className.includes("wait") ? "wait" : ""); Object.values(nodes).forEach((g) => g.classList.remove("thinking")); break;
     }
   }
   async function ask(e) {
@@ -206,7 +208,7 @@ const WF = (() => {
   function init() {
     build();
     $$("wfOpen").addEventListener("click", open); $$("wfClose").addEventListener("click", close); $$("wfHome").addEventListener("click", close);
-    $$("wfRun").addEventListener("click", () => { $$("wfRun").disabled = true; $$("wfRun").textContent = "Running…"; App.start(); });
+    $$("wfRun").addEventListener("click", () => { App.start(); });  // starts a run, or cancels the active one
     $$("wfReset").addEventListener("click", resetLayout); $$("wfZin").addEventListener("click", () => zoomAt(500, 400, 1.2)); $$("wfZout").addEventListener("click", () => zoomAt(500, 400, 1 / 1.2));
     $$("wfAsk").addEventListener("submit", ask); document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$$("wf").hidden) close(); });
   }
