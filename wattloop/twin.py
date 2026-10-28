@@ -207,9 +207,9 @@ def check_service(before: dict, after: dict) -> list[str]:
     bc = {c["id"]: c for c in before["components"]}
     for c in after["components"]:
         o = bc.get(c["id"])
-        if not o:
-            continue
         t = c["type"]
+        if not o and t != "pv":
+            continue
         if t == "pump" and c.get("vsd") and c["flow_demand"] < 0.3:
             bad.append(f"{c['id']}: required flow {c['flow_demand']:.2f} is below the 30% minimum safe drive speed")
         if t == "compressor" and c["air_demand"] + c["leak"] > 1.0:
@@ -223,9 +223,9 @@ def check_service(before: dict, after: dict) -> list[str]:
                 bad.append(f"{c['id']}: {c['kwp']:.0f} kWp is oversized, its peak {peak:.0f} kW exceeds 80% of the lowest daytime load (no export credit assumed)")
         if t == "hvac" and c["setpoint_c"] > 26.0:
             bad.append(f"{c['id']}: setpoint {c['setpoint_c']:.0f} C is above the 26 C comfort/process limit")
-        if t in ("pump", "compressor", "lighting", "motors") and c.get("hours") != o.get("hours"):
+        if o and t in ("pump", "compressor", "lighting", "motors") and c.get("hours") != o.get("hours"):
             bad.append(f"{c['id']}: operating hours changed (production would be cut)")
-        if t == "pump" and c["flow_demand"] != o["flow_demand"]:
+        if o and t == "pump" and c["flow_demand"] != o["flow_demand"]:
             bad.append(f"{c['id']}: delivered flow changed")
     return bad
 

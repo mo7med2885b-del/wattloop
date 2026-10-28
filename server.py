@@ -100,7 +100,7 @@ def preview():
     from wattloop import twin
     shift = {"start": 6, "end": 22, "days_per_week": 6}
     spec = pipeline.generic_spec(shift)
-    return {"spec": spec, "hourly": [round(v, 1) for v in twin.hourly_kw(spec)]}
+    return {"spec": spec, "hourly": [round(v, 1) for v in twin.hourly_kw(spec)], "parts": twin._parts(spec, None)}
 
 
 @app.get("/api/demo/instant")
@@ -111,7 +111,7 @@ def demo_instant():
     generic = pipeline.generic_spec({"start": 6, "end": 22, "days_per_week": 6})
     bill = demo.case()["bill_kwh"]
     round1 = [{"type": "vsd_pump", "target": "pumps"}, {"type": "repair_leaks", "target": "air", "target_leak": 0.0}, {"type": "led_retrofit", "target": "lights"},
-              {"type": "lighting_controls", "target": "lights"}, {"type": "hvac_setpoint", "target": "hvac", "setpoint_c": 30}, {"type": "standby_shutdown", "target": "standby"}, {"type": "solar_pv", "kwp": 300}]
+              {"type": "lighting_controls", "target": "lights"}, {"type": "hvac_setpoint", "target": "hvac", "setpoint_c": 30}, {"type": "standby_shutdown", "target": "standby"}, {"type": "solar_pv", "kwp": 600}]
     round2 = [{"type": "repair_leaks", "target": "air", "target_leak": 0.05}, {"type": "hvac_setpoint", "target": "hvac", "setpoint_c": 24}, {"type": "solar_pv", "kwp": 40}]
     accepted: list[dict] = []
     rounds = []

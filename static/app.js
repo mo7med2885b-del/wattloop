@@ -59,7 +59,7 @@ const App = (() => {
   }
   function drawCmp() {
     const spec = Factory.getSpec(); if (!spec) return; const wd = spec.shift.days_per_week * 4.33, sum = (p) => (p || []).reduce((a, b) => a + b, 0) * wd;
-    const rows = spec.components.map((c) => ({ n: c.name || c.id, a: sum(S.partsA[c.id]), b: sum(S.partsB[c.id]) })), max = Math.max(1, ...rows.map((r) => Math.max(r.a, Math.abs(r.b))));
+    const rows = spec.components.map((c) => ({ n: c.name || c.id, a: sum((S.partsA || {})[c.id]), b: sum((S.partsB || {})[c.id]) })), max = Math.max(1, ...rows.map((r) => Math.max(r.a, Math.abs(r.b))));
     $("#cmp tbody").innerHTML = rows.slice(0, 7).map((r) => `<tr><td>${String(r.n).slice(0, 18)}</td><td style="width:30%"><span class="bar o" style="width:${Math.max(2, r.a / max * 100)}%"></span></td><td>${fmt(r.a)}</td><td style="width:20%"><span class="bar" style="width:${Math.max(2, Math.abs(r.b) / max * 100)}%"></span></td><td>${fmt(r.b)}</td></tr>`).join("");
   }
   function drawMini() {

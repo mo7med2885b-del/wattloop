@@ -101,3 +101,4 @@ button.primary{width:100%;margin-top:3px;background:var(--or);color:#140a00;bord
 @media(prefers-reduced-motion:reduce){.sweep{animation:none}*{transition:none!important}}
 
 .demobtn{background:transparent;border:1px solid var(--or);color:var(--or2);padding:6px 14px;font-weight:800;font-size:12px;letter-spacing:.04em}.demobtn:hover{background:var(--or);color:#140a00}
+.vg[hidden],.overview[hidden]{display:none}
