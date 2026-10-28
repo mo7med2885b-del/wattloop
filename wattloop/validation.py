@@ -7,6 +7,8 @@ Sources and statuses: docs/research/validation-evidence.md (kept in the private 
 """
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from statistics import mean, median
 
 from . import twin
@@ -127,10 +129,51 @@ LIMITS = ["Component models are checked against published data from the US and E
           "Savings are screening estimates. An engineer verifies them on site."]
 
 
+HOLDOUT = Path(__file__).resolve().parent / "data" / "holdout.json"
+
+
+def _score_holdout(item: dict) -> float | None:
+    """Current (frozen) model prediction for one held-out published point."""
+    k, x, P = item["kind"], item.get("inputs", {}), {**twin.PARAMS}
+    try:
+        if k == "pump_const":
+            return _pump(float(x["f"]), False)
+        if k == "pump_vsd":
+            return _pump(float(x["f"]), True, float(x.get("s", 0.0)))
+        if k == "comp":
+            return twin.component_power_kw({"type": "compressor", "rated_kw": 1.0, "air_demand": float(x["load"]), "leak": 0.0, "control": x.get("control", "modulating")}, P)
+        if k == "led":
+            return twin.component_power_kw({"type": "lighting", "kw": 1.0, "led": True, "legacy": x.get("legacy", "t8")}, P)
+        if k == "hvac":
+            base = twin.component_power_kw({"type": "hvac", "kw": 1.0, "setpoint_c": 22.0}, P)
+            return 1 - twin.component_power_kw({"type": "hvac", "kw": 1.0, "setpoint_c": 22.0 + float(x["dc"])}, P) / base
+        if k == "leak_kwh":
+            c = lambda lk: twin.component_power_kw({"type": "compressor", "rated_kw": float(x["rated_kw"]), "air_demand": float(x.get("demand", .5)), "leak": lk, "control": x.get("control", "load_unload")}, P)
+            return (c(float(x["leak0"])) - c(float(x["leak1"]))) * float(x.get("hours", 8760))
+    except (KeyError, TypeError, ValueError):
+        return None
+    return None
+
+
+def holdout() -> dict | None:
+    """Out-of-sample check: published points that were NOT used to set any constant. Constants are frozen."""
+    if not HOLDOUT.exists():
+        return None
+    rows = []
+    for it in json.loads(HOLDOUT.read_text(encoding="utf-8")):
+        m = _score_holdout(it)
+        pub = it.get("published")
+        if m is None or not pub:
+            continue
+        rows.append({"id": it.get("id"), "component": it.get("component"), "label": it.get("label"), "published": pub, "model": m, "err_pct": (m - pub) / pub * 100,
+                     "source": it.get("source"), "url": it.get("url"), "link_verified": it.get("status") == "VERIFIED", "unit": "kWh/yr" if it["kind"] == "leak_kwh" else "ratio", "note": it.get("status", "")})
+    return {"rows": rows, **summary(rows), "sources": len({r["url"] for r in rows})} if rows else None
+
+
 def run() -> dict:
     leg, cur = _rows("legacy"), _rows("current")
     return {"legacy": {"rows": leg, **summary(leg)}, "current": {"rows": cur, **summary(cur)},
-            "independent_sources": 8, "provenance": [dict(zip(("item", "value", "basis", "status"), p)) for p in PROVENANCE], "limits": LIMITS, "note": "Component models vs published data only. Not a field validation. 'current' constants were fitted on the same points (in-sample)."}
+            "independent_sources": 8, "holdout": holdout(), "provenance": [dict(zip(("item", "value", "basis", "status"), p)) for p in PROVENANCE], "limits": LIMITS, "note": "Component models vs published data only. Not a field validation. 'current' constants were fitted on the same points (in-sample)."}
 
 
 if __name__ == "__main__":
