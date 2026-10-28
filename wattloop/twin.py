@@ -11,8 +11,8 @@ DAYS_PER_MONTH = 4.33  # weeks per month
 
 # Scenario parameter sets for sensitivity (low / base / high savings).
 PARAMS = {
-    "tariff_egp_per_kwh": 2.55,       # UNVERIFIED blog figure for medium-voltage industry; user-editable (docs/research/egypt-energy.md)
-    "grid_kgco2_per_kwh": 0.447,      # UNVERIFIED search-snippet figure; user-editable
+    "tariff_egp_per_kwh": 2.05,       # high-voltage industry, Arab Finance report (docs/research/egypt-energy.md); user-editable
+    "grid_kgco2_per_kwh": 0.55,       # UNFCCC IFI grid factor for Egypt, Jul 2019 (docs/research/egypt-energy.md)
     "pv_kwh_per_kwp_day": 5.0,        # PVGIS Cairo 1,827 kWh/kWp/yr (docs/research/egypt-energy.md)
     "led_factor": 0.5,                # LED draws about half of the old lamp power (ASSUMPTION)
     "hvac_pct_per_c": 0.06,           # HVAC power change per degree of setpoint (ASSUMPTION)
@@ -214,6 +214,13 @@ def check_service(before: dict, after: dict) -> list[str]:
             bad.append(f"{c['id']}: required flow {c['flow_demand']:.2f} is below the 30% minimum safe drive speed")
         if t == "compressor" and c["air_demand"] + c["leak"] > 1.0:
             bad.append(f"{c['id']}: air demand plus leaks exceeds compressor capacity")
+        if t == "compressor" and c["leak"] < 0.03:
+            bad.append(f"{c['id']}: a leak share below 3% is not achievable in practice (ASSUMPTION floor)")
+        if t == "pv":
+            day = [v for h, v in enumerate(hourly_kw(before)) if 8 <= h < 16 and v > 0]
+            peak = c["kwp"] * PARAMS["pv_kwh_per_kwp_day"] / 12.0
+            if day and peak > 0.8 * min(day):
+                bad.append(f"{c['id']}: {c['kwp']:.0f} kWp is oversized, its peak {peak:.0f} kW exceeds 80% of the lowest daytime load (no export credit assumed)")
         if t == "hvac" and c["setpoint_c"] > 26.0:
             bad.append(f"{c['id']}: setpoint {c['setpoint_c']:.0f} C is above the 26 C comfort/process limit")
         if t in ("pump", "compressor", "lighting", "motors") and c.get("hours") != o.get("hours"):

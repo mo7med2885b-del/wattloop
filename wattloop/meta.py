@@ -28,7 +28,7 @@ def env(key: str, default: str = "") -> str:
 
 
 PRICE_IN, PRICE_OUT = 0.15, 0.50  # USD per million tokens (Muse Spark 1.3 rate seen in v1; verify on the Meta dashboard)
-SAM_USD = 0.002  # rough per-call estimate, UNVERIFIED
+SAM_USD = 0.0025  # $2.50 per 1,000 images (docs/research/meta-models.md)
 
 
 class BudgetExceeded(RuntimeError):

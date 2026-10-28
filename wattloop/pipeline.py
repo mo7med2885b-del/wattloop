@@ -132,7 +132,7 @@ def generic_spec(shift: dict) -> dict:
 # ---------------------------------------------------------------- agents
 def vision_reader(run: Run):
     desc = run.case["description"]
-    sysm = SYSTEM_COMMON + ' Schema: {"equipment":[{"phrase":str,"kind":"pump|compressor|lighting|hvac|motors|standby|other","count":int|null,"rating_kw":number|null,"evidence":str}],"waste_signs":[str],"shift":{"start":int,"end":int,"days_per_week":int}|null}. phrase is a short visual noun phrase usable to locate the item in the photo.'
+    sysm = SYSTEM_COMMON + ' Schema: {"equipment":[{"phrase":str,"kind":"pump|compressor|lighting|hvac|motors|standby|other","count":int|null,"rating_kw":number|null,"evidence":str}],"waste_signs":[str],"shift":{"start":int,"end":int,"days_per_week":int}|null}. phrase is a 1-3 word generic noun phrase for one visible physical object (examples: air compressor, fluorescent light, air conditioner, conveyor belt, electric motor, pump) so an object detector can find it.'
     if not meta.available():
         raise RuntimeError("demo mode")
     r = _call(run, sysm, "Facility description from the owner:\n" + desc + "\nRead the photo (if any) and the description. List the equipment and visible waste signs.", image=run.image)
@@ -152,12 +152,16 @@ def vision_fallback(run: Run):
 def segmenter(run: Run, obs: dict):
     if not run.image or not meta.available():
         return {"boxes": []}, {"fallback": True, "note": "no photo or no Meta key: no overlay shown"}
+    from concurrent.futures import ThreadPoolExecutor
+    eq = [e for e in obs.get("equipment", []) if e.get("kind") != "standby"][:6]
+    with ThreadPoolExecutor(max_workers=6) as ex:
+        found = list(ex.map(lambda e: meta.sam_boxes(run.budget, run.image, e["phrase"]), eq))
     boxes = []
-    for e in obs.get("equipment", [])[:6]:
-        for b in meta.sam_boxes(run.budget, run.image, e["phrase"])[:2]:
-            boxes.append({"phrase": e["phrase"], "kind": e.get("kind"), "box": b})
-    run.calls += min(6, len(obs.get("equipment", [])))
-    return {"boxes": boxes}, {"model": "sam-3.1", "usd": 0.002 * len(obs.get("equipment", [])[:6]), "fallback": not boxes, "note": "" if boxes else "SAM returned no regions"}
+    for e, bs in zip(eq, found):
+        bs = sorted(bs, key=lambda b: -(b[2] - b[0]) * (b[3] - b[1]))[:3]
+        boxes += [{"phrase": e["phrase"], "kind": e.get("kind"), "box": b} for b in bs]
+    run.calls += len(eq)
+    return {"boxes": boxes}, {"model": "sam-3.1", "usd": 0.0025 * len(eq), "fallback": not boxes, "note": "" if boxes else "SAM returned no regions"}
 
 
 def twin_engineer(run: Run, obs: dict):
@@ -243,7 +247,7 @@ def hunt_and_verify(run: Run, spec: dict):
         if meta.available():
             try:
                 sysm = SYSTEM_COMMON + ' Return {"fixes":[{"type":str,"target":str,"setpoint_c":number,"target_leak":number,"kwp":number,"why":str}]}. ' + FIX_DOC + \
-                       " Propose the most aggressive plan that keeps production, flow, air supply and comfort intact. A code verifier will simulate every fix and reject unsafe ones."
+                       " Round 1: be maximally aggressive on every parameter (largest setpoint rise, lowest leak target, biggest solar array you think the plant can use). A code verifier will simulate every fix and reject unsafe or impractical ones; later rounds must correct what it rejected."
                 r = _call(run, sysm, f"Calibrated twin: {json.dumps(spec['components'])}\nMonthly kWh by component: {json.dumps(twin.breakdown_kwh(spec))}\n"
                                      f"Fixes already accepted: {json.dumps(accepted)}\nVerifier feedback from the last round: {feedback or 'none yet'}\n"
                                      "Propose fixes not yet accepted. Include a solar_pv size only if sensible for the roof-free daytime load.")
@@ -349,9 +353,9 @@ def report_writer(run: Run, ev: dict, plan: list[dict], arb: dict, crit: dict):
             sysm = SYSTEM_COMMON + ' Return {"summary":str}. Write 3 short sentences for a plant manager. Use ONLY the numbers given; never add other numbers. Say these are simulated estimates that an engineer must verify on site.'
             r = _call(run, sysm, f"Verified result: {ev['saved_kwh_month']} kWh/month, {ev['saved_egp_year']} EGP/year, {ev['co2_t_year']} tonnes CO2/year, capex {ev['capex_egp']} EGP, payback {ev['payback_months']} months. Range {arb['range_egp_year']}. Fixes: {[f['type'] for f in plan]}")
             s = (r["json"] or {}).get("summary", "")
-            allowed = {re.sub(r"[,\.]$", "", n.replace(",", "")) for n in nums} | {str(ev['payback_months']), str(arb['range_egp_year'][0]), str(arb['range_egp_year'][1])}
-            found = {x.replace(",", "").rstrip(".") for x in NUM.findall(s)}
-            if s and all(f in allowed or float(f) < 10 for f in found if f):
+            allowed = [ev["saved_kwh_month"], ev["saved_egp_year"], ev["co2_t_year"], ev["capex_egp"], ev["payback_months"] or 0, *arb["range_egp_year"]]
+            found = [float(x.replace(",", "").rstrip(".")) for x in NUM.findall(s) if x.replace(",", "").rstrip(".")]
+            if s and all(f < 10 or any(abs(f - a) <= 0.005 * max(1.0, abs(a)) for a in allowed) for f in found):
                 summary = s
                 info = {"model": r["model"], "usd": r["usd"], "calls": 1}
         except Exception:  # noqa: BLE001
@@ -376,14 +380,17 @@ def execute(run: Run):
     obs = run.step("vision", v, "Read equipment (Muse Spark vision)")
     if "equipment" not in obs:
         obs = vision_fallback(run)[0]
-    run.step("segment", lambda: segmenter(run, obs), "Locate equipment (SAM 3.1)")
-
     def e():
         try:
             return twin_engineer(run, obs)
         except Exception:  # noqa: BLE001
             return {"spec": generic_spec(case["shift"])}, {"fallback": True, "note": "generic first guess"}
-    spec = run.step("engineer", e, "Build first-guess twin")["spec"]
+    box: dict = {}
+    th = threading.Thread(target=lambda: box.update(spec=run.step("engineer", e, "Build first-guess twin")["spec"]))
+    th.start()  # twin building runs in parallel with SAM segmentation
+    run.step("segment", lambda: segmenter(run, obs), "Locate equipment (SAM 3.1)")
+    th.join()
+    spec = box["spec"]
     spec, err = calibrate_loop(run, spec, case["bill_kwh"])
     plan, ev = hunt_and_verify(run, spec)
     sens = twin.sensitivity(spec, plan)

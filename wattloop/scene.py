@@ -3,10 +3,21 @@ from __future__ import annotations
 
 import io
 
+from pathlib import Path
+
 from PIL import Image, ImageDraw, ImageFont
+
+ASSET = Path(__file__).resolve().parent.parent / "static" / "assets" / "demo-plant.png"  # generated once with Muse Image, labelled synthetic
 
 
 def demo_png() -> bytes:
+    f = ASSET
+    if f.exists():
+        return f.read_bytes()
+    return _draw()
+
+
+def _draw() -> bytes:
     W, H = 1280, 720
     im = Image.new("RGB", (W, H), (205, 210, 214))
     d = ImageDraw.Draw(im)
