@@ -13,6 +13,7 @@ const WF = (() => {
     ["vision", "Vision Reader", "vision", "agent", ""],
     ["segment", "Segmenter", "segment", "agent", "SAM 3.1"],
     ["engineer", "Twin Engineer", "engineer", "agent", ""],
+    ["design", "Scene Designer", "segment", "agent", "3D layout and props"],
     ["calibrate", "Calibrator loop", "calibrate", "agent", ""],
     ["hunt", "Waste Hunter", "hunt", "agent", ""],
     ["verify", "Fix Verifier", "verify", "code", "Simulator · no model"],
@@ -20,13 +21,13 @@ const WF = (() => {
     ["report", "Report Writer", "report", "agent", ""],
     ["gate", "Engineer review", "gate", "human", "Final decision"],
   ];
-  const POS = { core: [500, 95], intake: [150, 95], scene: [500, 215], vision: [320, 325], segment: [680, 325], engineer: [500, 430], calibrate: [500, 525], hunt: [320, 630], verify: [680, 630], critic: [500, 725], report: [320, 815], gate: [680, 815] };
+  const POS = { core: [500, 95], intake: [150, 95], scene: [500, 215], vision: [320, 325], segment: [680, 325], engineer: [500, 425], design: [500, 510], calibrate: [500, 595], hunt: [320, 700], verify: [680, 700], critic: [500, 795], report: [320, 885], gate: [680, 885] };
   const DEFAULT_POS = JSON.parse(JSON.stringify(POS));
   // line id -> [from, to]; "final" is the special return line from the orb to the review gate
   const EDGES = { intake: ["intake", "core"], core_scene: ["core", "scene"], scene_vision: ["scene", "vision"], scene_segment: ["scene", "segment"], vision_segment: ["vision", "segment"],
-    vision_engineer: ["vision", "engineer"], segment_engineer: ["segment", "engineer"], engineer_calibrate: ["engineer", "calibrate"], calibrate_hunt: ["calibrate", "hunt"],
+    vision_engineer: ["vision", "engineer"], segment_engineer: ["segment", "engineer"], engineer_design: ["engineer", "design"], design_calibrate: ["design", "calibrate"], calibrate_hunt: ["calibrate", "hunt"],
     hunt_verify: ["hunt", "verify"], verify_hunt: ["verify", "hunt"], hunt_critic: ["hunt", "critic"], verify_critic: ["verify", "critic"], critic_report: ["critic", "report"], report_gate: ["report", "gate"] };
-  const INLINES = { scene: ["core_scene"], vision: ["scene_vision"], segment: ["scene_segment", "vision_segment"], engineer: ["vision_engineer", "segment_engineer"], calibrate: ["engineer_calibrate"], hunt: ["calibrate_hunt"], verify: ["hunt_verify"], critic: ["hunt_critic", "verify_critic"], report: ["critic_report"], gate: ["report_gate"] };
+  const INLINES = { scene: ["core_scene"], vision: ["scene_vision"], segment: ["scene_segment", "vision_segment"], engineer: ["vision_engineer", "segment_engineer"], design: ["engineer_design"], calibrate: ["design_calibrate"], hunt: ["calibrate_hunt"], verify: ["hunt_verify"], critic: ["hunt_critic", "verify_critic"], report: ["critic_report"], gate: ["report_gate"] };
   const view = { k: 1, x: 0, y: 0 };
   let svg, layer, nodes = {}, lines = {}, icons = {}, results = {}, breathe = null, t0 = 0, done = 0, calls = 0, cost = 0, rej = 0, modelLabel = "Muse Spark 1.3";
   const $$ = (id) => document.getElementById(id);
@@ -69,7 +70,7 @@ const WF = (() => {
     const defs = el("defs", {}, svg); layer = el("g", { id: "wfWorld" }, svg); applyView();
     const f = el("filter", { id: "wfGlow", x: "-80%", y: "-80%", width: "260%", height: "260%" }, defs);
     el("feGaussianBlur", { stdDeviation: "3.2", result: "b" }, f); const m = el("feMerge", {}, f); el("feMergeNode", { in: "b" }, m); el("feMergeNode", { in: "SourceGraphic" }, m);
-    const lg = el("linearGradient", { id: "wfLineGrad", gradientUnits: "userSpaceOnUse", x1: 0, y1: 0, x2: 0, y2: 860 }, defs);
+    const lg = el("linearGradient", { id: "wfLineGrad", gradientUnits: "userSpaceOnUse", x1: 0, y1: 0, x2: 0, y2: 940 }, defs);
     el("stop", { offset: "0", "stop-color": "var(--or)" }, lg); el("stop", { offset: "0.55", "stop-color": "var(--or2)" }, lg); el("stop", { offset: "1", "stop-color": "var(--warn)" }, lg);
     const cg = el("linearGradient", { id: "wfCardGrad", x1: 0, y1: 0, x2: 1, y2: 1 }, defs); el("stop", { offset: "0", "stop-color": "var(--card1)", "stop-opacity": ".95" }, cg); el("stop", { offset: "1", "stop-color": "var(--card2)", "stop-opacity": ".97" }, cg);
     const hc = el("linearGradient", { id: "wfCardHuman", x1: 0, y1: 0, x2: 1, y2: 1 }, defs); el("stop", { offset: "0", "stop-color": "var(--hcard1)", "stop-opacity": ".95" }, hc); el("stop", { offset: "1", "stop-color": "var(--hcard2)", "stop-opacity": ".97" }, hc);
@@ -118,7 +119,7 @@ const WF = (() => {
     Object.values(nodes).forEach((g) => { g.classList.remove("thinking", "waiting", "done", "rejected", "st-code", "st-support", "st-against", "st-uncertain", "st-human", "st-warn", "st-bad"); const st = g.querySelector(".wf-stance"); if (st) st.textContent = ""; });
     Object.values(lines).forEach((p) => p.classList.remove("live", "warn")); Object.values(icons).forEach((i) => i.idle());
     results = {}; done = 0; calls = 0; cost = 0; rej = 0;
-    $$("tDone").textContent = "0/11"; $$("tRej").textContent = "–"; $$("tErr").textContent = "–"; $$("tCalls").textContent = "0"; $$("tCost").textContent = "Model calls"; $$("tSave").textContent = "Running…";
+    $$("tDone").textContent = "0/12"; $$("tRej").textContent = "–"; $$("tErr").textContent = "–"; $$("tCalls").textContent = "0"; $$("tCost").textContent = "Model calls"; $$("tSave").textContent = "Running…";
     $$("wfBrief").hidden = true; $$("wfLog").replaceChildren(); $$("wfAnswer").hidden = true;
   }
   function startBreathing() { if (!hasG || reduce || breathe) return; breathe = gsap.to(nodes.core.querySelector(".wf-halo"), { scale: 1.2, opacity: 0.6, duration: 1.3, ease: "sine.inOut", yoyo: true, repeat: -1, transformOrigin: "50% 50%" }); }
@@ -140,6 +141,7 @@ const WF = (() => {
       case "vision": return (o.equipment ? o.equipment.length : 0) + " ITEMS";
       case "segment": return (o.boxes ? o.boxes.length : 0) + " REGIONS";
       case "engineer": return (o.spec ? o.spec.components.length : 0) + " PARTS";
+      case "design": return ((o.design && o.design.extras) ? o.design.extras.length : 0) + " PROPS";
       case "calibrate": return "ERR " + (o.final_err_pct > 0 ? "+" : "") + o.final_err_pct + "%";
       case "hunt": return (o.plan ? o.plan.length : 0) + " FIXES";
       case "verify": return (o.accepted || 0) + " OK · " + (o.rejected || 0) + " NO";
@@ -156,6 +158,7 @@ const WF = (() => {
     if (id === "scene") add(ul, "li", `${o.subject || ""}${o.reason ? " · " + o.reason : ""}`);
     if (id === "vision") (o.equipment || []).slice(0, 6).forEach((e) => add(ul, "li", `${e.phrase} (${e.kind})`)), (o.waste_signs || []).slice(0, 4).forEach((w) => add(ul, "li", "Sign: " + w));
     if (id === "segment") (o.boxes || []).slice(0, 8).forEach((b) => add(ul, "li", b.phrase));
+    if (id === "design" && o.design) { Object.entries(o.design.layout || {}).forEach(([k, v]) => add(ul, "li", `${k}: x ${v.x}, z ${v.z}, scale ${v.scale}${v.why ? " - " + v.why : ""}`)); (o.design.extras || []).forEach((x) => add(ul, "li", `prop: ${x.role} (${x.shape})`)); if (o.design.notes) add(ul, "li", o.design.notes); }
     if (id === "engineer") (o.spec ? o.spec.components : []).forEach((c) => add(ul, "li", `${c.name || c.id} (${c.type})`));
     if (id === "calibrate") add(ul, "li", `Final twin error vs bill: ${o.final_err_pct}% (${o.calibrated ? "calibrated" : "not within 5%"})`);
     if (id === "hunt") (o.plan || []).forEach((f) => add(ul, "li", f.type.replace(/_/g, " ") + (f.target ? " · " + f.target : "")));
@@ -176,10 +179,10 @@ const WF = (() => {
         const bad = ev.output && (ev.output.error || ev.output.ok === false); g.classList.add("done", ev.fallback ? "st-warn" : bad ? "st-bad" : (DEF.find((d) => d[0] === id) || [])[3] === "code" ? "st-code" : "st-against"); pop(id);
         g.querySelector(".wf-stance").textContent = summarize(id, ev);
         if (ev.model) { const mn = g.querySelector(".wf-mname"); if (mn) mn.textContent = pretty(ev.model); }
-        done += 1; $$("tDone").textContent = `${done}/11`; calls += ev.calls || 0; cost += ev.usd || 0; $$("tCalls").textContent = String(calls); $$("tCost").textContent = `Model calls · $${cost.toFixed(4)}`;
+        done += 1; $$("tDone").textContent = `${done}/12`; calls += ev.calls || 0; cost += ev.usd || 0; $$("tCalls").textContent = String(calls); $$("tCost").textContent = `Model calls · $${cost.toFixed(4)}`;
         (INLINES[id] || []).forEach((l) => pulse(l, "back", 0.7, true));
         log(`${nameOf(id)}: ${summarize(id, ev).toLowerCase()}${ev.fallback && ev.note ? " (" + ev.note + ")" : ""}`, ev.fallback ? "warn" : bad ? "bad" : "ok"); break; }
-      case "loop": $$("tErr").textContent = (ev.err_pct > 0 ? "+" : "") + ev.err_pct + "%"; pulse("engineer_calibrate", "", 0.5); log(`Calibration ${ev.iter}: twin ${Math.round(ev.twin_kwh).toLocaleString()} vs bill ${Math.round(ev.bill_kwh).toLocaleString()} kWh (${ev.err_pct > 0 ? "+" : ""}${ev.err_pct}%)`, Math.abs(ev.err_pct) <= 5 ? "ok" : "warn"); break;
+      case "loop": $$("tErr").textContent = (ev.err_pct > 0 ? "+" : "") + ev.err_pct + "%"; pulse("design_calibrate", "", 0.5); log(`Calibration ${ev.iter}: twin ${Math.round(ev.twin_kwh).toLocaleString()} vs bill ${Math.round(ev.bill_kwh).toLocaleString()} kWh (${ev.err_pct > 0 ? "+" : ""}${ev.err_pct}%)`, Math.abs(ev.err_pct) <= 5 ? "ok" : "warn"); break;
       case "note": log(ev.text, "warn"); break;
       case "fix_round": {
         pulse("hunt_verify", "", 0.7); setTimeout(() => pulse("verify_hunt", "back", 0.7, false), 750);

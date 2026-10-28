@@ -54,7 +54,15 @@ window.Factory = (function () {
     STATIC = false;
     const byType = (t) => spec.components.filter((c) => c.type === t);
     const zc = (c) => (after && isFixed[c.type](c) ? GR : OR);
-    const zone = (c, cx, cz, zw, zd) => { w.fills[c.id] = zoneOutline(sc, cx, cz, zw, zd, zc(c)); w.anchors[c.id] = new T.Vector3(cx, 2.2, cz); w.zones = w.zones || {}; w.zones[c.id] = [cx, cz]; };
+    let tgt = sc, cur = null;   // objects of one machine go into one group so the designed layout can move and scale it
+    const begin = (c) => { cur = new T.Group(); tgt = cur; sc.add(cur); };
+    const end = (c, tcx, tcz) => {
+      tgt = sc; const d = c.design; if (!d || !cur) return; const k = d.scale || 1;
+      cur.scale.setScalar(k); cur.position.set(d.x - k * tcx, 0, d.z - k * tcz); cur.updateMatrix();
+      if (w.anchors[c.id]) w.anchors[c.id].applyMatrix4(cur.matrix);
+      if (w.zones && w.zones[c.id]) { const v = new T.Vector3(w.zones[c.id][0], 0, w.zones[c.id][1]).applyMatrix4(cur.matrix); w.zones[c.id] = [v.x, v.z]; }
+    };
+    const zone = (c, cx, cz, zw, zd) => { w.fills[c.id] = zoneOutline(tgt, cx, cz, zw, zd, zc(c)); w.anchors[c.id] = new T.Vector3(cx, 2.2, cz); w.zones = w.zones || {}; w.zones[c.id] = [cx, cz]; };
 
     const L = byType("lighting")[0];
     if (L) {
@@ -66,7 +74,7 @@ window.Factory = (function () {
     }
     const P = byType("pump")[0];
     if (P) {
-      const n = Math.min(3, P.count);
+      begin(P); const n = Math.min(3, P.count);
       for (let i = 0; i < n; i++) {
         const g = new T.Group(); g.position.set(-10.5 + i * 3.6, 0, 6);
         const base = Box(3, .35, 1.9, DARK, EDGE, .7); base.position.y = .18; g.add(base);
@@ -75,42 +83,42 @@ window.Factory = (function () {
         const imp = Box(.1, 1.3, .16, OR, OR, 1); imp.position.set(1.42, 1.15, 0); g.add(imp);
         const valve = new T.Mesh(new T.TorusGeometry(.32, .08, 8, 20), mat(P.vsd ? GR : 0xff3b30, { emissive: P.vsd ? 0x0b4a2a : 0x600c08, emissiveIntensity: 1, roughness: .4 })); valve.position.set(2.05, 2.1, 0); valve.rotation.y = Math.PI / 2; g.add(valve);
         const pipe = Box(.24, 1.1, .24, 0x2a2e33, EDGE, .6); pipe.position.set(2.05, 1.45, 0); g.add(pipe);
-        sc.add(g); w.pumps.push({ imp, valve });
+        tgt.add(g); w.pumps.push({ imp, valve });
       }
       zone(P, -10.5 + (n - 1) * 1.8 + .5, 6, n * 3.6 + 2, 4.4);
-      const h = glow("heatR", "rgba(255,70,40,.8)", 7, 2.2); h.position.set(-8, 2.2, 6); sc.add(h); w.heat[P.id] = h;
+      const h = glow("heatR", "rgba(255,70,40,.8)", 7, 2.2); h.position.set(-8, 2.2, 6); tgt.add(h); w.heat[P.id] = h; end(P, -10.5 + (n - 1) * 1.8 + .5, 6);
     }
     const C = byType("compressor")[0];
     if (C) {
-      const g = new T.Group(); g.position.set(5, 0, 5.4);
+      begin(C); const g = new T.Group(); g.position.set(5, 0, 5.4);
       const body = Box(2.9, 2.4, 2, 0x201d12, EDGE, .75); body.position.y = 1.2; g.add(body);
       const tank = Cyl(.9, 3.6, BODY, EDGE, 26, .65); tank.rotation.z = Math.PI / 2; tank.position.set(3.8, 1.05, 0); g.add(tank);
       const mot = Cyl(.55, 1.1, 0x25292d, EDGE); mot.position.set(0, 2.95, 0); g.add(mot);
-      sc.add(g); zone(C, 7, 5.4, 9.6, 4.6);
+      tgt.add(g); zone(C, 7, 5.4, 9.6, 4.6);
       const n = 110, geo = new T.BufferGeometry(), pos = new Float32Array(n * 3), ph = new Float32Array(n).map(() => Math.random());
       geo.setAttribute("position", new T.BufferAttribute(pos, 3));
-      const pts = new T.Points(geo, new T.PointsMaterial({ color: 0xffd9b0, size: .24, transparent: true, opacity: .9, depthWrite: false, blending: T.AdditiveBlending })); pts.frustumCulled = false; sc.add(pts);
+      const pts = new T.Points(geo, new T.PointsMaterial({ color: 0xffd9b0, size: .24, transparent: true, opacity: .9, depthWrite: false, blending: T.AdditiveBlending })); pts.frustumCulled = false; tgt.add(pts);
       w.leaks = { pts, ph, n, base: [[6, 2.2, 5.4], [8.9, 1.9, 6], [5.2, 1.4, 6.4]] };
-      const h = glow("heatR", "rgba(255,70,40,.8)", 9, 2.4); h.position.set(7.4, 2.4, 5.4); sc.add(h); w.heat[C.id] = h;
+      const h = glow("heatR", "rgba(255,70,40,.8)", 9, 2.4); h.position.set(7.4, 2.4, 5.4); tgt.add(h); w.heat[C.id] = h; end(C, 7, 5.4);
     }
     const M = byType("motors")[0];
     if (M) {
-      const belt = Box(16, .5, 2, 0x16191c, EDGE, .75); belt.position.set(-2, 1, -3.6); sc.add(belt);
-      for (let i = 0; i < 6; i++) { const b = Box(1.1, .85, 1.1, 0x3a2e1f, OR, .9); b.position.set(-9.5 + i * 2.5, 1.7, -3.6); sc.add(b); w.boxes.push(b); }
-      const mot = Cyl(.65, 1.4, BODY, EDGE); mot.rotation.z = Math.PI / 2; mot.position.set(6.8, .95, -3.6); sc.add(mot);
-      zone(M, -1.6, -3.6, 18, 3.6);
+      begin(M); const belt = Box(16, .5, 2, 0x16191c, EDGE, .75); belt.position.set(-2, 1, -3.6); tgt.add(belt);
+      for (let i = 0; i < 6; i++) { const b = Box(1.1, .85, 1.1, 0x3a2e1f, OR, .9); b.position.set(-9.5 + i * 2.5, 1.7, -3.6); tgt.add(b); w.boxes.push(b); }
+      const mot = Cyl(.65, 1.4, BODY, EDGE); mot.rotation.z = Math.PI / 2; mot.position.set(6.8, .95, -3.6); tgt.add(mot);
+      zone(M, -1.6, -3.6, 18, 3.6); end(M, -1.6, -3.6);
     }
     const H = byType("hvac")[0];
     if (H) {
-      const u = Box(3.6, 1.5, 1, 0x23272b, EDGE, .8); u.position.set(10, 3.5, -10.6); sc.add(u);
-      const fan = new T.Mesh(new T.CircleGeometry(.5, 18), mat(0x4b535a)); fan.position.set(10, 3.5, -10.08); edges(fan, EDGE); sc.add(fan); w.fan = fan;
-      w.anchors[H.id] = new T.Vector3(10, 4.4, -10.6); w.zones = w.zones || {}; w.zones[H.id] = [10, -10.6]; w.fills[H.id] = zoneOutline(sc, 10, -9, 4.6, 3, zc(H));
+      begin(H); const u = Box(3.6, 1.5, 1, 0x23272b, EDGE, .8); u.position.set(10, 3.5, -10.6); tgt.add(u);
+      const fan = new T.Mesh(new T.CircleGeometry(.5, 18), mat(0x4b535a)); fan.position.set(10, 3.5, -10.08); edges(fan, EDGE); tgt.add(fan); w.fan = fan;
+      w.anchors[H.id] = new T.Vector3(10, 4.4, -10.6); w.zones = w.zones || {}; w.zones[H.id] = [10, -10.6]; w.fills[H.id] = zoneOutline(tgt, 10, -9, 4.6, 3, zc(H)); end(H, 10, -9.3);
     }
     const SB = byType("standby")[0];
     if (SB) {
-      const b = Box(2, 2, 1.5, BODY, EDGE, .7); b.position.set(-13.5, 1, -3.6); sc.add(b);
-      const led = new T.Mesh(new T.SphereGeometry(.18, 10, 10), mat(0x303030, { emissive: 0xff2a20, emissiveIntensity: 0 })); led.position.set(-12.6, 1.7, -2.8); sc.add(led); w.stby = { led, off: !!SB.auto_off };
-      zone(SB, -13.5, -3.6, 3.6, 3);
+      begin(SB); const b = Box(2, 2, 1.5, BODY, EDGE, .7); b.position.set(-13.5, 1, -3.6); tgt.add(b);
+      const led = new T.Mesh(new T.SphereGeometry(.18, 10, 10), mat(0x303030, { emissive: 0xff2a20, emissiveIntensity: 0 })); led.position.set(-12.6, 1.7, -2.8); tgt.add(led); w.stby = { led, off: !!SB.auto_off };
+      zone(SB, -13.5, -3.6, 3.6, 3); end(SB, -13.5, -3.6);
     }
     const V = byType("pv")[0];
     if (V) {
@@ -118,6 +126,12 @@ window.Factory = (function () {
       for (let i = 0; i < cnt; i++) { const p = Box(2.3, .1, 1.5, 0x0f1d3d, GR, .9); p.position.set(-10 + (i % 7) * 3.4, 8.6, -3 + Math.floor(i / 7) * 3.6); p.rotation.x = -.25; sc.add(p); w.pv.push(p); }
       w.anchors[V.id] = new T.Vector3(0, 9, 0); w.zones = w.zones || {}; w.zones[V.id] = [0, 0];
     }
+    // props designed by the Scene Designer (validated primitives only): they make the plant look like this plant
+    const PAL = { steel: 0x59626d, dark: 0x2b313a, accent: 0x6b3a14 };
+    (spec.extras || []).forEach((x) => {
+      const m = x.shape === "cylinder" ? Cyl(x.size[0], x.size[1], PAL[x.color] || PAL.steel, x.color === "accent" ? OR : EDGE, 22, .75) : Box(x.size[0], x.size[1], x.size[2], PAL[x.color] || PAL.steel, x.color === "accent" ? OR : EDGE, .75);
+      m.position.set(x.pos[0], x.pos[1], x.pos[2]); sc.add(m);
+    });
     // energy flow lines from the grid entry (front left) to every zone, like the routed paths in the reference
     const entry = [-15, 10]; const color = after ? GR : OR;
     Object.entries(w.zones || {}).forEach(([id, [x, z]]) => { if (!w.fills[id]) return; w.flows[id] = flowLine(sc, [entry, [entry[0], z > 0 ? z : 9.5], [x, z > 0 ? 9.5 : 9.5], [x, z + (z > 0 ? 2.3 : z < -9 ? 2 : 1.8)]], color); });

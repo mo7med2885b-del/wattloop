@@ -26,9 +26,9 @@ const App = (() => {
     if (!spec) return; if (box.firstElementChild && box.firstElementChild.classList.contains("muted")) box.innerHTML = "";
     spec.components.forEach((c) => {
       const now = brief(c); let row = box.querySelector(`[data-id="${c.id}"]`);
-      if (!row) { row = document.createElement("div"); row.className = "brow"; row.dataset.id = c.id; row.innerHTML = `<div class="bi">${ICON[c.type] || "•"}</div><div><b>${c.name || c.id}</b><span class="d"></span></div><i class="pg"></i>`; box.append(row);
+      if (!row) { row = document.createElement("div"); row.className = "brow"; row.dataset.id = c.id; row.innerHTML = `<div class="bi">${ICON[c.type] || "•"}</div><div><b>${c.name || c.id}</b><span class="bd"></span></div><i class="pg"></i>`; box.append(row);
         if (window.gsap && !reduce) { gsap.from(row, { x: -18, opacity: 0, duration: .45 }); gsap.fromTo(row.querySelector(".pg"), { scaleX: 0, transformOrigin: "0 50%" }, { scaleX: 1, duration: .7, onComplete() { row.querySelector(".pg").style.opacity = 0; } }); } }
-      const d = row.querySelector(".d"), was = buildPrev[c.id];
+      const d = row.querySelector(".bd"), was = buildPrev[c.id];
       if (was && was !== now) { d.innerHTML = `<del>${was}</del><span class="chg">${now}</span>`; if (window.gsap && !reduce) gsap.fromTo(row, { backgroundColor: "rgba(255,106,0,.28)" }, { backgroundColor: "rgba(0,0,0,0)", duration: 1.2, clearProps: "backgroundColor" }); }
       else d.textContent = now; buildPrev[c.id] = now; row.classList.toggle("ok", stage.startsWith("after"));
     });
@@ -86,7 +86,7 @@ const App = (() => {
     const svg = $("#minimap"); svg.innerHTML = ""; const spec = Factory.getSpec(); if (!spec) return;
     const X = (x) => 8 + (x + 17) / 34 * 144, Z = (z) => 6 + (z + 11.5) / 23 * 76; el("rect", { x: 6, y: 5, width: 148, height: 80, fill: "var(--field)", stroke: "var(--line2)" }, svg);
     const plan = { pump: [-8, 6, 13, 4], compressor: [7, 5.4, 9.6, 4.4], motors: [-1.6, -3.6, 18, 3.4], hvac: [10, -9, 4.6, 2.6], standby: [-13.5, -3.6, 3.4, 2.8] }, sc = Factory.scene(), after = sc && sc.after;
-    spec.components.forEach((c) => { const p = plan[c.type]; if (!p) return; const ok = after && ({ pump: c.vsd, compressor: c.leak < .07, standby: c.auto_off, hvac: c.setpoint_c >= 24 }[c.type]), col = ok ? "var(--ok)" : "var(--or)";
+    spec.components.forEach((c) => { let p = plan[c.type]; if (!p) return; if (c.design) { const k = c.design.scale || 1; p = [c.design.x, c.design.z, p[2] * k, p[3] * k]; } const ok = after && ({ pump: c.vsd, compressor: c.leak < .07, standby: c.auto_off, hvac: c.setpoint_c >= 24 }[c.type]), col = ok ? "var(--ok)" : "var(--or)";
       el("rect", { x: X(p[0] - p[2] / 2), y: Z(p[1] - p[3] / 2), width: p[2] / 34 * 144, height: p[3] / 23 * 76, fill: col, opacity: .2, stroke: col }, svg); });
     if (spec.components.some((c) => c.type === "pv")) el("text", { x: 80, y: 46, fill: "var(--ok)", "font-size": 10, "text-anchor": "middle" }, svg).textContent = "☀ PV roof";
   }
@@ -136,7 +136,8 @@ const App = (() => {
       case "node_start": stepMark(ev.node, "act"); { const m = { scene: ["Checking the image", "Is it clearly a factory? Muse Spark vision looks first."], vision: ["Reading the equipment", "Muse Spark vision lists machines and waste signs."], segment: ["Locating equipment", "SAM 3.1 outlines each machine in the photo."], engineer: ["Building the twin", "Muse Spark writes a first-guess model as structured data."], calibrate: ["Calibrating to your bill", "Adjusting the uncertain parameters until the twin matches the bill."], hunt: ["Testing fixes in the twin", "Aggressive proposals first; code rejects what is impractical."], critic: ["Trying to refute the savings", "The Critic attacks the claim; code adds a sensitivity range."], report: ["Writing the engineer brief", "Only verified numbers are allowed in the text."] }[ev.node]; if (m) caption(...m); break; }
       case "node_done":
         stepMark(ev.node, "done");
-        if (ev.node === "engineer" && ev.output && ev.output.spec) { renderBuild(ev.output.spec, "engineer draft", true); hideLoader(); const z = Array(24).fill(0); calSpec = ev.output.spec; Factory.setSpecs(ev.output.spec, ev.output.spec, {}, {}, z, z); refreshAll(); caption("Twin written", "Machines assemble from the model's structured output."); }
+        if (ev.node === "engineer" && ev.output && ev.output.spec) { renderBuild(ev.output.spec, "engineer draft", true); calSpec = ev.output.spec; }
+        if (ev.node === "design") { hideLoader(); const sp = (ev.output && ev.output.spec) || calSpec; if (sp) { const z = Array(24).fill(0); calSpec = sp; renderBuild(sp, "designed layout"); Factory.setSpecs(sp, sp, {}, {}, z, z); refreshAll(); const n = ev.output && ev.output.design ? ev.output.design.extras.length : 0; caption("3D scene designed", ev.fallback ? "Layout from the SAM boxes (model design not available)." : `Muse Spark placed the machines from the photo and added ${n} props.`); } }
         calls += ev.calls || 0; cost += ev.usd || 0;
         if (ev.node === "vision" && ev.output && ev.output.equipment) { detect.obs = ev.output; updateBadge(); }
         if (ev.node === "segment" && ev.output && ev.output.boxes) { overlay(ev.output.boxes); detect.boxes = ev.output.boxes; updateBadge(); }

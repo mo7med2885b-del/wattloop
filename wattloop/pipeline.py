@@ -12,7 +12,7 @@ import threading
 import time
 import uuid
 
-from . import meta, twin
+from . import designer, meta, twin
 
 NODES = ["intake", "scene", "vision", "segment", "engineer", "calibrate", "hunt", "verify", "critic", "report", "gate"]
 SYSTEM_COMMON = ("You are one agent in an industrial energy-audit pipeline for Egyptian facilities. "
@@ -420,6 +420,27 @@ def scene_check_text(budget: meta.Budget, text: str) -> dict:
     return {"ok": bool(j.get("is_industrial_facility")) and conf >= 0.6, "subject": str(j.get("subject", "unknown"))[:80], "confidence": conf, "reason": str(j.get("reason", ""))[:200], "usd": r["usd"], "model": r["model"]}
 
 
+def scene_designer(run: Run, spec: dict, obs: dict, boxes: list[dict]):
+    """Muse Spark designs the floor plan, proportions and props of the 3D plant; code validates it. Fallback: layout from the SAM boxes, then the template."""
+    fb = designer.layout_from_boxes(spec, boxes)
+    if meta.available():
+        try:
+            r = meta.chat(run.budget, designer.SYSTEM, designer.user_prompt(spec, run.case["description"], obs, boxes), effort="medium", max_tokens=7000)
+            run.calls += 1
+            if r["json"]:
+                design = designer.validate_design(r["json"], spec, fb)
+                designer.apply_design(spec, design)
+                return {"spec": spec, "design": design, "boxes_used": len(boxes)}, {"model": r["model"], "usd": r["usd"], "calls": 1}
+            run.cost += r["usd"]
+        except meta.BudgetExceeded:
+            raise
+        except Exception:  # noqa: BLE001
+            pass
+    design = designer.validate_design({}, spec, fb)
+    designer.apply_design(spec, design)
+    return {"spec": spec, "design": design, "boxes_used": len(boxes)}, {"fallback": True, "note": "layout from the SAM boxes" if fb else "template layout"}
+
+
 # ---------------------------------------------------------------- orchestrator
 def _execute(run: Run):
     case = run.case
@@ -470,9 +491,10 @@ def _execute(run: Run):
     box: dict = {}
     th = threading.Thread(target=lambda: box.update(spec=run.step("engineer", e, "Build first-guess twin")["spec"]))
     th.start()  # twin building runs in parallel with SAM segmentation
-    run.step("segment", lambda: segmenter(run, obs), "Locate equipment (SAM 3.1)")
+    seg = run.step("segment", lambda: segmenter(run, obs), "Locate equipment (SAM 3.1)")
     th.join()
     spec = box["spec"]
+    run.step("design", lambda: scene_designer(run, spec, obs, (seg or {}).get("boxes", [])), "Design the 3D scene (Muse Spark)")
     spec, err = calibrate_loop(run, spec, case["bill_kwh"])
     plan, ev = hunt_and_verify(run, spec)
     sens = twin.sensitivity(spec, plan)

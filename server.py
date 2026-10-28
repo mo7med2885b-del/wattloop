@@ -240,4 +240,12 @@ def index():
     return FileResponse(STATIC / "index.html", headers={"Cache-Control": "no-store"})
 
 
-app.mount("/static", StaticFiles(directory=STATIC), name="static")
+class NoCacheStatic(StaticFiles):
+    """Static files are never cached while we iterate, so the browser always runs the latest scripts."""
+    async def get_response(self, path, scope):
+        r = await super().get_response(path, scope)
+        r.headers["Cache-Control"] = "no-store"
+        return r
+
+
+app.mount("/static", NoCacheStatic(directory=STATIC), name="static")

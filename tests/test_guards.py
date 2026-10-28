@@ -72,7 +72,7 @@ def test_full_run_is_bounded_even_when_models_return_garbage(monkeypatch):
     pipeline.execute(run)
     assert run.finished
     assert run.events[-1]["type"] == "done"
-    assert len(calls) <= 20, f"too many model calls: {len(calls)}"
+    assert len(calls) <= 24, f"too many model calls: {len(calls)}"
     meta._GLOBAL.clear()
 
 
