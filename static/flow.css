@@ -168,3 +168,6 @@
 .wf .wf-head .wf-close:hover,.wf .wf-head .wf-theme:hover{border-color:var(--or);color:var(--or)}
 .wf .wf-head .wf-run{height:40px;padding:0 20px;box-shadow:0 4px 14px color-mix(in srgb,var(--or) 35%,transparent)}
 .wf .wf-model{height:40px;padding:0 14px 0 10px}
+
+.wf .wf-legend{background:color-mix(in srgb,var(--pn) 92%,transparent);color:var(--tx);border:1px solid var(--edge);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.wf .wf-reset,.wf .wf-zoom button{background:var(--pn);color:var(--tx);border:1px solid var(--edge)}
