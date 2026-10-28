@@ -16,8 +16,9 @@ const App = (() => {
 
   // ---------------------------------------------------------------- live twin build panel
   const ICON = { pump: "◎", compressor: "▤", lighting: "☼", hvac: "❄", motors: "⚙", standby: "⏻", pv: "▦" };
-  const brief = (c) => ({ pump: `${c.count}× ${c.rated_kw.toFixed(0)} kW · flow ${Math.round(c.flow_demand * 100)}% · ${c.vsd ? "VSD" : "valve"}`, compressor: `${c.rated_kw.toFixed(0)} kW · leak ${Math.round(c.leak * 100)}% · demand ${Math.round(c.air_demand * 100)}%`,
-    lighting: `${c.kw.toFixed(0)} kW · ${c.led ? "LED" : "fluorescent"} · after-hrs ${c.controls ? "controlled" : c.after_hours_h || 0}`, hvac: `${c.kw.toFixed(0)} kW · ${c.setpoint_c.toFixed(0)} °C · ${c.hours} h`, motors: `${c.kw.toFixed(0)} kW · load ${Math.round(c.load_factor * 100)}%`, standby: `${c.auto_off ? "auto off" : c.kw.toFixed(1) + " kW"}`, pv: `${c.kwp.toFixed(0)} kWp` }[c.type] || c.type);
+  const nf = (v, d = 0) => (Number.isFinite(+v) ? (+v).toFixed(d) : "?"), pc = (v) => (Number.isFinite(+v) ? Math.round(+v * 100) + "%" : "?");
+  const brief = (c) => ({ pump: `${c.count || 1}× ${nf(c.rated_kw)} kW · flow ${pc(c.flow_demand)} · ${c.vsd ? "VSD" : "valve"}`, compressor: `${nf(c.rated_kw)} kW · leak ${pc(c.leak)} · demand ${pc(c.air_demand)}`,
+    lighting: `${nf(c.kw)} kW · ${c.led ? "LED" : "fluorescent"} · after-hrs ${c.controls ? "controlled" : c.after_hours_h || 0}`, hvac: `${nf(c.kw)} kW · ${nf(c.setpoint_c)} °C · ${c.hours || "?"} h`, motors: `${nf(c.kw)} kW · load ${pc(c.load_factor)}`, standby: `${c.auto_off ? "auto off" : nf(c.kw, 1) + " kW"}`, pv: `${nf(c.kwp)} kWp` }[c.type] || String(c.type));
   const buildPrev = {};
   function renderBuild(spec, stage, reset) {
     const box = $("#build"); if (reset) { box.innerHTML = ""; for (const k in buildPrev) delete buildPrev[k]; } $("#buildStage").textContent = stage;
@@ -133,7 +134,7 @@ const App = (() => {
       case "node_start": stepMark(ev.node, "act"); { const m = { scene: ["Checking the image", "Is it clearly a factory? Muse Spark vision looks first."], vision: ["Reading the equipment", "Muse Spark vision lists machines and waste signs."], segment: ["Locating equipment", "SAM 3.1 outlines each machine in the photo."], engineer: ["Building the twin", "Muse Spark writes a first-guess model as structured data."], calibrate: ["Calibrating to your bill", "Adjusting the uncertain parameters until the twin matches the bill."], hunt: ["Testing fixes in the twin", "Aggressive proposals first; code rejects what is impractical."], critic: ["Trying to refute the savings", "The Critic attacks the claim; code adds a sensitivity range."], report: ["Writing the engineer brief", "Only verified numbers are allowed in the text."] }[ev.node]; if (m) caption(...m); break; }
       case "node_done":
         stepMark(ev.node, "done");
-        if (ev.node === "engineer" && ev.output && ev.output.spec) renderBuild(ev.output.spec, "engineer draft", true);
+        if (ev.node === "engineer" && ev.output && ev.output.spec) { renderBuild(ev.output.spec, "engineer draft", true); hideLoader(); const z = Array(24).fill(0); calSpec = ev.output.spec; Factory.setSpecs(ev.output.spec, ev.output.spec, {}, {}, z, z); refreshAll(); caption("Twin written", "Machines assemble from the model's structured output."); }
         calls += ev.calls || 0; cost += ev.usd || 0;
         if (ev.node === "segment" && ev.output && ev.output.boxes) overlay(ev.output.boxes);
         if (ev.node === "scene") alog(ev.output && ev.output.ok ? "Scene check: " + (ev.output.subject || "factory") : "Scene check refused the image", ev.output && ev.output.ok ? "ok" : "bad"); break;
@@ -158,7 +159,7 @@ const App = (() => {
     $("#fixnote").textContent = `Round ${round}: rejected fixes go back to the hunter with the reason.`;
   }
   function overlay(boxes) { const o = $("#overlay"); o.innerHTML = ""; boxes.forEach((b) => { const [x1, y1, x2, y2] = b.box; el("rect", { x: x1, y: y1, width: x2 - x1, height: y2 - y1, fill: "rgba(255,106,0,.12)", stroke: "#ff6a00", "stroke-width": 3, "vector-effect": "non-scaling-stroke" }, o); el("text", { x: x1 + 6, y: y1 + 28, fill: "#ff9a4d", "font-size": 26, "font-weight": 700 }, o).textContent = b.phrase; }); }
-  async function poll() { const r = await (await fetch(`/api/run/${runId}?since=${since}`)).json(); r.events.forEach(handle); since = r.next; }
+  async function poll() { const r = await (await fetch(`/api/run/${runId}?since=${since}`)).json(); since = r.next; r.events.forEach((ev) => { try { handle(ev); } catch (e) { console.error("event handler failed", ev.type, e); } }); }
 
   // ---------------------------------------------------------------- instant demo (pre-computed, no AI)
   async function demo() {

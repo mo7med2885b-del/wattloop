@@ -180,13 +180,17 @@ window.Factory = (function () {
   }
   const tmp = new T.Vector3();
   function placeCallouts(w, rect) {
+    const placed = [];   // simple collision avoidance: push a tag up until it no longer covers one already placed
     Object.values(cos).forEach(({ d, ln, c }) => {
       const a = w.anchors[c.id]; const hidden = !a || (S.focus && S.focus !== c.id);
       if (hidden) { d.style.opacity = 0; d.style.pointerEvents = "none"; ln.setAttribute("opacity", 0); return; }
       tmp.copy(a).project(cam); const x = (tmp.x * .5 + .5) * rect.w, y = (-tmp.y * .5 + .5) * rect.h, o = OFFS[c.type] || [0, -70];
       const cx = Math.max(80, Math.min(rect.w - 80, x + o[0])), cy = Math.max(76, Math.min(rect.h - 30, y + o[1]));
-      d.style.opacity = 1; d.style.pointerEvents = "auto"; d.style.left = cx + "px"; d.style.top = cy + "px";
-      const col = d.classList.contains("fixed") ? "#35e08a" : "#ff6a00"; ln.setAttribute("d", `M${cx},${cy} L${x},${y}`); ln.setAttribute("stroke", col); ln.setAttribute("opacity", .85);
+      let top = cy; const hgt = d.offsetHeight || 80;
+      for (let k = 0; k < 8; k++) { const hit = placed.find((p) => Math.abs(p.x - cx) < 158 && top - hgt < p.y && top > p.y - p.h); if (!hit) break; top = hit.y - hit.h - 4; }
+      placed.push({ x: cx, y: top, h: hgt });
+      d.style.opacity = 1; d.style.pointerEvents = "auto"; d.style.left = cx + "px"; d.style.top = top + "px";
+      const col = d.classList.contains("fixed") ? "#35e08a" : "#ff6a00"; ln.setAttribute("d", `M${cx},${top} L${x},${y}`); ln.setAttribute("stroke", col); ln.setAttribute("opacity", .85);
     });
   }
 
@@ -211,7 +215,7 @@ window.Factory = (function () {
     }
     if (onFrame) onFrame({ hour, partsA: S.partsA, partsB: S.partsB, hourA: S.hourA, hourB: S.hourB, mode: S.mode, focus: S.focus });
   }
-  let assemble = false;
+  let assemble = false, holdUntil = 0, pending = null, pendTimer = null;
   function assembleIn(w) {
     if (!w || !window.gsap) return; const parts = []; w.sc.traverse((o) => { if (o.isMesh && o.userData.part && !o.userData.static) parts.push(o); });
     parts.sort((a, b) => (a.getWorldPosition(new T.Vector3()).x + a.getWorldPosition(new T.Vector3()).z * .3) - (b.getWorldPosition(new T.Vector3()).x + b.getWorldPosition(new T.Vector3()).z * .3));
@@ -220,7 +224,7 @@ window.Factory = (function () {
   }
   function rebuild() {
     disposeW(W.A); disposeW(W.B); W.A = S.specA ? build(S.specA, false) : null; W.B = S.specB ? build(S.specB, true) : null;
-    if (assemble && (W.A || W.B)) { assemble = false; assembleIn(W.A); assembleIn(W.B); }
+    if (assemble && S.specA && S.specA.components.length) { assemble = false; holdUntil = performance.now() + 2300; assembleIn(W.A); assembleIn(W.B); }
     buildCallouts(S.mode === "after" ? S.specB : S.specA);
   }
   const api = {
@@ -235,7 +239,11 @@ window.Factory = (function () {
       box.addEventListener("wheel", (e) => { e.preventDefault(); orbit.dist = Math.min(80, Math.max(8, orbit.dist * (e.deltaY > 0 ? 1.07 : 1 / 1.07))); }, { passive: false });
     },
     start() { if (!running) { running = true; clock.getDelta(); frame(); } }, stop() { running = false; },
-    setSpecs(a, b, pa, pb, ha, hb) { S.specA = a; S.specB = b || a; S.partsA = pa || S.partsA; S.partsB = pb || pa || S.partsB; S.hourA = ha || S.hourA; S.hourB = hb || ha || S.hourB; rebuild(); },
+    setSpecs(...args) {   // while machines are assembling, later updates wait so the animation is not reset
+      const now = performance.now(); if (now < holdUntil) { pending = args; clearTimeout(pendTimer); pendTimer = setTimeout(() => { const p = pending; pending = null; if (p) api.setSpecsNow(...p); }, holdUntil - now + 60); return; }
+      api.setSpecsNow(...args);
+    },
+    setSpecsNow(a, b, pa, pb, ha, hb) { S.specA = a; S.specB = b || a; S.partsA = pa || S.partsA; S.partsB = pb || pa || S.partsB; S.hourA = ha || S.hourA; S.hourB = hb || ha || S.hourB; rebuild(); },
     expectAssemble() { assemble = true; }, setTheme(light) { LIGHT = !!light; rebuild(); }, setMode(m) { S.mode = m; rebuild(); }, togglePause() { S.paused = !S.paused; return S.paused; },
     focus(id) {
       S.focus = id; const w = S.mode === "after" ? W.B : W.A;

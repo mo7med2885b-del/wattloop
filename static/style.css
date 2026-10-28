@@ -105,7 +105,7 @@ button.primary{width:100%;margin-top:3px;background:var(--or);color:var(--btn-in
 .vg[hidden],.overview[hidden]{display:none}
 button.primary.danger{background:var(--bad);color:#fff}
 
-.stage{float:right;margin-right:6px;font-weight:600;letter-spacing:.04em;color:var(--or2);text-transform:none}
+.bstage{float:right;margin-right:6px;font-weight:600;letter-spacing:.04em;color:var(--or2);text-transform:none}
 .build{display:grid;gap:5px;max-height:220px;overflow-y:auto}
 .brow{position:relative;display:grid;grid-template-columns:26px 1fr;gap:8px;align-items:center;padding:5px 7px;background:var(--field);border:1px solid var(--line);font-size:11px;overflow:hidden}
 .brow .bi{width:26px;height:26px;display:grid;place-items:center;border:1px solid var(--line2);color:var(--or);font-size:13px}
