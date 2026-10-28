@@ -1,0 +1,39 @@
+# WattLoop
+
+**Show WattLoop a photo, a description and an electricity bill. It builds a living twin of the facility, finds the energy waste, and proves each fix in simulation before any money is spent.**
+
+Built for Egyptian industry, where energy prices keep rising and most small facilities cannot pay for a full energy audit. WattLoop gives a fast first-pass audit. Every result ends at an **engineer review** gate: the numbers are simulated estimates that an engineer verifies on site.
+
+## What you see
+- **Live twin:** a 3D plant with an accelerated day cycle. The left half shows the plant as the bill describes it (air leaks, throttled pumps, lights left on, standby loads). The right half shows the same plant after the fixes the agents verified, with live kW meters.
+- **Agent workflow:** the agents as a graph, animated only from real run events, with each step's model, latency and cost.
+- **Fix attempts:** the Waste Hunter proposes aggressive fixes; the verifier simulates them and rejects impractical ones with a reason; the hunter corrects them.
+
+## How it works
+1. **Vision Reader** (Muse Spark 1.3, image input) lists the equipment and waste signs from the photo and description.
+2. **Segmenter** (SAM 3.1) outlines the equipment in the photo.
+3. **Twin Engineer** (Muse Spark) writes a first-guess twin as structured JSON.
+4. **Calibration loop:** a deterministic simulator compares the twin's monthly kWh to the real bill; Muse Spark adjusts the uncertain parameters until the error is under 5%.
+5. **Waste Hunter + Fix Verifier loop:** Muse Spark proposes fixes from a catalog (variable-speed drives, leak repair, LED, lighting controls, setpoints, standby shut-down, solar PV). Code applies each fix to the twin and checks hard service constraints; rejected fixes go back with the reason.
+6. **Critic** (Muse Spark) tries to refute the savings; code runs a sensitivity range and computes confidence.
+7. **Report Writer** (Muse Spark) writes the brief using only verified numbers; a validator rejects any number that is not in the result.
+
+Models only propose and explain. All arithmetic, verification and confidence scoring is plain code. Every model step has a deterministic fallback.
+
+## Meta models used
+Muse Spark 1.3 (vision, structured output, reasoning), SAM 3.1 (segmentation), Muse Image 1.0 (the synthetic demo photo). A real run uses about 13 model calls and costs roughly two US cents. A per-run call cap, a per-minute cap and a daily spend cap are enforced in `wattloop/meta.py`.
+
+## Data
+No real facility or personal data. The demo plant, its photo (generated with Muse Image) and its electricity bill are synthetic. Default tariffs, emission factor and equipment costs are editable assumptions; sources and their verification status are listed in the project notes.
+
+## Run it
+```bash
+pip install -r requirements.txt
+cp .env.example .env   # add META_API_KEY and META_BASE_URL
+python -m uvicorn server:app --port 8010
+# open http://localhost:8010
+```
+Without a Meta key the app runs in a labelled demo mode with deterministic stand-ins.
+
+## Limits
+Savings come from a simplified physics model of the facility (pumps, compressed air, lighting, cooling, motors, standby, solar), not from measurements. The twin supports one facility type (light industry) in this version. An engineer must verify any recommendation on site.
