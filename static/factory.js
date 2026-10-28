@@ -48,7 +48,7 @@ window.Factory = (function () {
     const grid = new T.GridHelper(34, 34, LIGHT ? 0xb9c0c7 : 0x24272b, LIGHT ? 0xd0d5db : 0x1a1c1f); grid.position.y = .02; grid.scale.z = 23 / 34; sc.add(grid);
     const per = zoneOutline(sc, 0, 0, 33.4, 22.4, 0x7a3300); per.material.opacity = .02;
     // distant structures for context (tanks and sheds), like the wider factory in the reference
-    [[-22, -9, 3, 6], [-26, 3, 2.4, 4], [22, -12, 3.4, 7], [27, 2, 2.2, 5]].forEach(([x, z, r, h]) => { const t = Cyl(r, h, 0x15181b, 0x5a5f66, 24, .5); t.position.set(x, h / 2, z); sc.add(t); });
+    [[-25, -10, 2.4, 5], [-29, 4, 2, 3.5], [25, -13, 2.6, 5.5], [30, 3, 1.8, 4]].forEach(([x, z, r, h]) => { const t = Cyl(r, h, 0x15181b, 0x5a5f66, 24, .5); t.position.set(x, h / 2, z); sc.add(t); });
     [[-24, 12, 6, 3, 5], [24, 14, 7, 2.5, 5]].forEach(([x, z, bw, bh, bd]) => { const b = Box(bw, bh, bd, 0x14171a, 0x5a5f66, .5); b.position.set(x, bh / 2, z); sc.add(b); });
     STATIC = false;
     const byType = (t) => spec.components.filter((c) => c.type === t);
@@ -174,8 +174,7 @@ window.Factory = (function () {
       if (c.type === "lighting") { R("Type", c.led ? "LED" : "fluorescent"); R("After hours", c.controls ? "controlled" : (c.after_hours_h || 0) + " h on"); warn = c.led || c.controls ? "FIXED · EFFICIENT + CONTROLLED" : (c.after_hours_h > 0 ? "WARNING · LEFT ON AFTER HOURS" : ""); }
       if (c.type === "standby") { R("Overnight", c.auto_off ? "auto off" : c.kw.toFixed(1) + " kW on"); warn = c.auto_off ? "FIXED · AUTO SHUT-DOWN" : "WARNING · LEFT ON"; }
       if (c.type === "pv") { sub = `${Math.abs(kw).toFixed(1)} kW output`; R("Size", c.kwp.toFixed(0) + " kWp"); warn = "ADDED · SOLAR"; }
-      if (warn) rows.push(`<span class="warn">${warn}</span>`);
-      d.classList.toggle("fixed", !!fixed || c.type === "pv"); d.querySelector(".sub").textContent = sub; d.querySelector(".body").innerHTML = rows.join("");
+      d.classList.toggle("fixed", !!fixed || c.type === "pv"); d.querySelector(".sub").textContent = sub; const warnHtml = warn ? `<span class="warn">${warn}</span>` : ""; d.querySelector(".body").innerHTML = `<div class="rows">${rows.filter((r) => !r.startsWith("<span")).join("")}</div>${warnHtml}`; d.classList.toggle("solo", S.focus === c.id);
     });
   }
   const tmp = new T.Vector3();
@@ -188,7 +187,7 @@ window.Factory = (function () {
       const cx = Math.max(80, Math.min(rect.w - 80, x + o[0])), cy = Math.max(76, Math.min(rect.h - 30, y + o[1]));
       let top = cy; const hgt = d.offsetHeight || 80;
       for (let k = 0; k < 8; k++) { const hit = placed.find((p) => Math.abs(p.x - cx) < 158 && top - hgt < p.y && top > p.y - p.h); if (!hit) break; top = hit.y - hit.h - 4; }
-      placed.push({ x: cx, y: top, h: hgt });
+      top = Math.max(hgt + 8, top); placed.push({ x: cx, y: top, h: hgt });
       d.style.opacity = 1; d.style.pointerEvents = "auto"; d.style.left = cx + "px"; d.style.top = top + "px";
       const col = d.classList.contains("fixed") ? "#35e08a" : "#ff6a00"; ln.setAttribute("d", `M${cx},${top} L${x},${y}`); ln.setAttribute("stroke", col); ln.setAttribute("opacity", .85);
     });

@@ -17,7 +17,8 @@ button{font:inherit;color:var(--tx);cursor:pointer}.muted{color:var(--mut)}.smal
 .wfbtn{display:inline-flex;align-items:center;gap:7px;background:var(--tx);color:var(--bg);border:0;padding:6px 12px;font-weight:800;font-size:12px}.wfbtn img{width:16px}
 
 /* main */
-.main{display:grid;grid-template-columns:282px minmax(0,1fr) 298px;min-height:0}
+.main{--lw:282px;--rw:298px;display:grid;grid-template-columns:var(--lw) minmax(0,1fr) var(--rw);min-height:0;transition:grid-template-columns .35s ease}
+.main.cl{--lw:0px}.main.cr{--rw:0px}.main.cl .side.left,.main.cr .side.right{overflow:hidden;border-width:0}
 .side{display:flex;flex-direction:column;min-height:0;overflow-y:auto;background:var(--bg2)}.side::-webkit-scrollbar,textarea::-webkit-scrollbar,.alog::-webkit-scrollbar{width:5px}
 .side::-webkit-scrollbar-thumb,textarea::-webkit-scrollbar-thumb,.alog::-webkit-scrollbar-thumb{background:var(--line2)}
 .side.left{border-right:1px solid var(--line)}.side.right{border-left:1px solid var(--line)}
@@ -136,3 +137,24 @@ button.primary.danger{background:var(--bad);color:#fff}
 @media(prefers-reduced-motion:reduce){.ring,.lbar i,.photo.scanning::after,.lsteps li.act::before{animation:none}}
 
 .co{--mut:#9aa0a6;--tx:#e8eaec}.co .sub{background:#fff;color:#111}
+
+.side{min-width:0}
+.edge-btn{position:absolute;top:50%;transform:translateY(-50%);z-index:8;width:22px;height:64px;border:1px solid var(--line2);background:color-mix(in srgb,var(--pn) 88%,transparent);color:var(--tx);font-size:16px;line-height:1;padding:0;display:grid;place-items:center}
+.edge-btn.l{left:0;border-left:0;border-radius:0 10px 10px 0}.edge-btn.r{right:0;border-right:0;border-radius:10px 0 0 10px}.edge-btn:hover{border-color:var(--or);color:var(--or)}
+.edge-btn .dot{position:absolute;top:6px;width:9px;height:9px;border-radius:50%;background:var(--or);display:none}.edge-btn.l .dot{right:4px}.edge-btn.r .dot{left:4px}
+.edge-btn.alert{border-color:var(--or);animation:glow 1.2s ease-in-out infinite}.edge-btn.alert .dot{display:block;animation:ping 1.2s ease-out infinite}
+@keyframes glow{50%{box-shadow:0 0 14px 2px color-mix(in srgb,var(--or) 70%,transparent)}}
+@keyframes ping{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--or) 80%,transparent)}100%{box-shadow:0 0 0 9px transparent}}
+@media(prefers-reduced-motion:reduce){.edge-btn.alert,.edge-btn.alert .dot{animation:none}.main{transition:none}}
+/* compact tags: title + power always, details on hover; clutter-free overview */
+.co{width:138px}.co .rows{display:none}.co:hover .rows,.co.solo .rows{display:block}.co:hover{z-index:5}
+/* light mode: white tags with dark text, calmer scene */
+:root[data-theme="light"] .co{--mut:#5b636b;--tx:#15181b}
+:root[data-theme="light"] .co .body{background:rgba(255,255,255,.97);border-color:rgba(232,93,0,.6);color:#15181b}
+:root[data-theme="light"] .co .sub{background:#15181b;color:#fff;border-left-color:var(--or)}
+:root[data-theme="light"] .stage{background:radial-gradient(900px 500px at 50% 35%,#ffffff 0,#e9edf1 80%)}
+:root[data-theme="light"] .caption{background:rgba(255,255,255,.94);color:#15181b;box-shadow:0 2px 14px rgba(0,0,0,.14)}
+:root[data-theme="light"] .caption span{color:#59616a}
+:root[data-theme="light"] .scenes{background:var(--field)}
+
+.tbl tr.no td:last-child{color:var(--bad)}.tbl tr.ok td:last-child{color:var(--ok)}:root[data-theme="light"] .tbl tr.no{background:color-mix(in srgb,var(--bad) 12%,transparent)}

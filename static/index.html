@@ -13,10 +13,10 @@
     <div class="logo"><svg viewBox="0 0 28 28" width="28" height="28"><path d="M9 6 L4 6 L4 22 L9 22 M19 6 L24 6 L24 22 L19 22" fill="none" stroke="#ff6a00" stroke-width="2.4"/><circle cx="14" cy="14" r="3" fill="#ff6a00"/></svg>
       <div><b>WattLoop</b><small>Energy Management System</small></div></div>
     <nav class="scenes" id="scenes"><button data-m="now" class="on">Plant now</button><button data-m="after">After verified fixes</button><button data-m="compare">Compare</button></nav>
-    <div class="top-right"><button class="themebtn" id="themeBtn" title="Light / dark mode">◐</button><button class="demobtn" id="demoBtn" title="Load a pre-computed twin instantly (no AI call)">▶ Demo</button><span class="chip" id="live">checking…</span><span class="clock"><b id="clock">06:00:00</b><i id="dayTag">simulated day</i></span><button class="wfbtn" id="wfOpen"><img src="/static/assets/meta-symbol-color.png" alt="">Agent workflow</button></div>
+    <div class="top-right"><button class="themebtn" id="themeBtn" title="Light / dark mode">◐</button><button class="demobtn" id="demoBtn" title="Load a pre-computed twin instantly (no AI call)">▶ Demo</button><span class="clock"><b id="clock">06:00:00</b><i id="dayTag">simulated day</i></span><button class="wfbtn" id="wfOpen"><img src="/static/assets/meta-symbol-color.png" alt="">Agent workflow</button></div>
   </header>
 
-  <div class="main">
+  <div class="main" id="main">
     <aside class="side left">
       <section class="pn"><div class="hd">FACILITY<i class="ci"></i></div>
         <div class="pb">
@@ -44,6 +44,8 @@
       <div class="vg" id="vg" hidden><div class="vgt">Maximum</div><div class="vgbar"><i id="vgfill"></i><em id="vgknob"></em></div><div class="vgt">Minimum</div><div class="vgv" id="vgv">–</div><div class="vgn" id="vgn">–</div></div>
       <button class="overview" id="overview" hidden>⟲ Overview</button>
       <div class="timeline" id="timeline"></div>
+      <button class="edge-btn l" id="toggleL" type="button" title="Show / hide the left panel" aria-label="Toggle left panel"><span>‹</span><i class="dot"></i></button>
+      <button class="edge-btn r" id="toggleR" type="button" title="Show / hide the right panel" aria-label="Toggle right panel"><span>›</span><i class="dot"></i></button>
     </section>
 
     <aside class="side right">

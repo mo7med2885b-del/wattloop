@@ -138,16 +138,16 @@ const App = (() => {
         calls += ev.calls || 0; cost += ev.usd || 0;
         if (ev.node === "segment" && ev.output && ev.output.boxes) overlay(ev.output.boxes);
         if (ev.node === "scene") alog(ev.output && ev.output.ok ? "Scene check: " + (ev.output.subject || "factory") : "Scene check refused the image", ev.output && ev.output.ok ? "ok" : "bad"); break;
-      case "loop": hideLoader(); renderBuild(ev.spec, "calibration " + ev.iter); calib.bill = ev.bill_kwh; calib.twin.push(ev.twin_kwh); drawCal(); calSpec = ev.spec; S.hourA = ev.hourly; S.hourB = ev.hourly; S.partsA = ev.parts; S.partsB = ev.parts;
+      case "loop": notify("l"); hideLoader(); renderBuild(ev.spec, "calibration " + ev.iter); calib.bill = ev.bill_kwh; calib.twin.push(ev.twin_kwh); drawCal(); calSpec = ev.spec; S.hourA = ev.hourly; S.hourB = ev.hourly; S.partsA = ev.parts; S.partsB = ev.parts;
         Factory.setSpecs(ev.spec, ev.spec, ev.parts, ev.parts, ev.hourly, ev.hourly); refreshAll(); $("#calnote").textContent = `Iteration ${ev.iter}: twin ${fmt(ev.twin_kwh)} vs bill ${fmt(ev.bill_kwh)} kWh (${ev.err_pct > 0 ? "+" : ""}${ev.err_pct}%)` + (Math.abs(ev.err_pct) <= 5 ? " · calibrated" : " · adjusting…");
         caption("Calibrating to your bill", `Twin ${fmt(ev.twin_kwh)} vs bill ${fmt(ev.bill_kwh)} kWh (${ev.err_pct > 0 ? "+" : ""}${ev.err_pct}%)`); alog(`Calibration ${ev.iter}: ${ev.err_pct > 0 ? "+" : ""}${ev.err_pct}%`, Math.abs(ev.err_pct) <= 5 ? "ok" : ""); radar(Math.max(0, Math.round(100 - Math.abs(ev.err_pct) * 3))); break;
       case "note": alog(ev.text); break;
-      case "fix_round": renderBuild(ev.spec_after, "after fixes · round " + ev.round); fixRows(ev.round, ev.results); S.hourA = ev.hourly_before; S.hourB = ev.hourly_after; S.partsA = ev.parts_before; S.partsB = ev.parts_after; if (calSpec) Factory.setSpecs(calSpec, ev.spec_after, ev.parts_before, ev.parts_after, ev.hourly_before, ev.hourly_after); refreshAll(); break;
-      case "gate": showResult(ev.result); Factory.setSpecs(calSpec, ev.result.spec_after, S.partsA, S.partsB, S.hourA, S.hourB); refreshAll(); caption("Verified in the twin", "Simulated estimates. An engineer must review before any action."); alog(`Plan verified: ${fmt(ev.result.evaluation.saved_egp_year)} EGP/yr (simulated)`, "ok"); if (autoCompare) { autoCompare = false; setMode("compare"); } break;
+      case "fix_round": notify("r"); renderBuild(ev.spec_after, "after fixes · round " + ev.round); fixRows(ev.round, ev.results); S.hourA = ev.hourly_before; S.hourB = ev.hourly_after; S.partsA = ev.parts_before; S.partsB = ev.parts_after; if (calSpec) Factory.setSpecs(calSpec, ev.spec_after, ev.parts_before, ev.parts_after, ev.hourly_before, ev.hourly_after); refreshAll(); break;
+      case "gate": notify("r"); showResult(ev.result); Factory.setSpecs(calSpec, ev.result.spec_after, S.partsA, S.partsB, S.hourA, S.hourB); refreshAll(); caption("Verified in the twin", "Simulated estimates. An engineer must review before any action."); alog(`Plan verified: ${fmt(ev.result.evaluation.saved_egp_year)} EGP/yr (simulated)`, "ok"); if (autoCompare) { autoCompare = false; setMode("compare"); } break;
       case "decision": $("#decided").textContent = "Engineer decision recorded: " + ev.action; alog("Engineer: " + ev.action, ev.action === "approve" ? "ok" : ""); break;
-      case "rejected": hideLoader(); caption("Image refused", ev.reason); imgStatus("bad", "Not processed: " + ev.reason); alog("Image refused: " + ev.reason, "bad"); $("#summary").textContent = "No analysis: the image is not a factory."; break;
+      case "rejected": notify("l"); notify("r"); hideLoader(); caption("Image refused", ev.reason); imgStatus("bad", "Not processed: " + ev.reason); alog("Image refused: " + ev.reason, "bad"); $("#summary").textContent = "No analysis: the image is not a factory."; break;
       case "cancelled": hideLoader(); caption("Run cancelled", "No further model calls will be made."); alog("Run cancelled by you", "bad"); $("#summary").textContent = "Cancelled."; break;
-      case "error": hideLoader(); alog("Stopped: " + ev.message, "bad"); caption("Run stopped", ev.message); break;
+      case "error": notify("r"); hideLoader(); alog("Stopped: " + ev.message, "bad"); caption("Run stopped", ev.message); break;
       case "done": hideLoader(); setRunning(false); clearInterval(timer); break;
     }
     $("#stat").textContent = `${calls} model calls · $${cost.toFixed(4)}`;
@@ -169,11 +169,11 @@ const App = (() => {
     d.rounds.forEach((r, i) => fixRows(i + 1, r)); $("#alog").innerHTML = ""; alog("DEMO: pre-computed model, no AI call", "ok"); alog("Round 1 rejected 2 over-aggressive fixes", "bad"); alog("Round 2 verified the corrected plan", "ok");
     showResult(d.result); S.hourA = d.result.evaluation.hourly_before; S.hourB = d.result.evaluation.hourly_after; S.partsA = d.result.evaluation.parts_before; S.partsB = d.result.evaluation.parts_after;
     Factory.setSpecs(d.spec, d.result.spec_after, S.partsA, S.partsB, S.hourA, S.hourB); Factory.focus(null); setMode("compare"); refreshAll(); $("#stat").textContent = "DEMO · 0 model calls · $0.0000";
-    caption("Demo twin loaded", "Pre-computed, no AI call. Click any machine tag or tab to look closer; press Build the twin for a live run."); imgStatus("ok", "Demo twin loaded instantly (pre-computed).");
+    notify("l"); notify("r"); caption("Demo twin loaded", "Pre-computed, no AI call. Click any machine tag or tab to look closer; press Build the twin for a live run."); imgStatus("ok", "Demo twin loaded instantly (pre-computed).");
   }
 
   // ---------------------------------------------------------------- image source: gallery / upload
-  function imgStatus(kind, text) { const s = $("#imgstatus"); s.hidden = !text; s.className = "imgstatus " + (kind || ""); s.textContent = text || ""; }
+  function imgStatus(kind, text) { if (kind === "bad") notify("l"); const s = $("#imgstatus"); s.hidden = !text; s.className = "imgstatus " + (kind || ""); s.textContent = text || ""; }
   function setPhoto(src) { $("#photo").src = src; $("#overlay").innerHTML = ""; }
   async function pickGallery(item) {
     source = { type: "gallery", id: item.id }; upload = null; imgOk = true; setPhoto(item.file); imgStatus("ok", "Gallery image: " + item.title); $("#bill").value = item.bill_kwh; $("#gal").hidden = true;
@@ -230,6 +230,14 @@ const App = (() => {
     if (!r.ok) { setRunning(false); let m = "Could not start."; try { m = (await r.json()).detail || m; } catch (e) { /* ignore */ } imgStatus("bad", m); return; }
     runId = (await r.json()).run_id; clearInterval(timer); timer = setInterval(poll, 500); poll();
   }
+  // collapsible side panels; a glowing dot on the edge button says "something new here" while a panel is collapsed
+  const collapsed = { l: false, r: false };
+  function setSide(side, closed) {
+    collapsed[side] = closed; $("#main").classList.toggle(side === "l" ? "cl" : "cr", closed); const b = $(side === "l" ? "#toggleL" : "#toggleR");
+    b.querySelector("span").textContent = side === "l" ? (closed ? "›" : "‹") : (closed ? "‹" : "›"); if (!closed) b.classList.remove("alert");
+    try { localStorage.setItem("wl-side-" + side, closed ? "1" : "0"); } catch (e) { /* ignore */ }
+  }
+  function notify(side) { if (collapsed[side]) $(side === "l" ? "#toggleL" : "#toggleR").classList.add("alert"); }
   function setMode(m) { Factory.setMode(m); document.querySelectorAll("#scenes button").forEach((b) => b.classList.toggle("on", b.dataset.m === m)); refreshAll(); }
 
   function applyTheme(t) { document.documentElement.dataset.theme = t; Factory.setTheme(t === "light"); try { localStorage.setItem("wl-theme", t); } catch (e) { /* private mode: no persistence */ } }
@@ -239,6 +247,8 @@ const App = (() => {
     let t0 = "dark"; try { t0 = localStorage.getItem("wl-theme") || "dark"; } catch (e) { /* ignore */ } applyTheme(t0);
     $("#themeBtn").addEventListener("click", toggleTheme); $("#wfTheme").addEventListener("click", toggleTheme); buildTimeline(); radar(null);
     document.querySelectorAll("#scenes button").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.m)));
+    $("#toggleL").addEventListener("click", () => setSide("l", !collapsed.l)); $("#toggleR").addEventListener("click", () => setSide("r", !collapsed.r));
+    try { if (localStorage.getItem("wl-side-l") === "1") setSide("l", true); if (localStorage.getItem("wl-side-r") === "1") setSide("r", true); } catch (e) { /* ignore */ }
     $("#run").addEventListener("click", start); $("#wfOpen").addEventListener("click", () => WF.open()); $("#demoBtn").addEventListener("click", demo); $("#overview").addEventListener("click", () => Factory.focus(null));
     $("#pick").addEventListener("click", (e) => { e.stopPropagation(); $("#pickMenu").hidden = !$("#pickMenu").hidden; });
     document.addEventListener("click", () => { $("#pickMenu").hidden = true; });
@@ -249,7 +259,6 @@ const App = (() => {
     WF.init();
     const [c, pv] = await Promise.all([fetch("/api/demo/case").then((r) => r.json()), fetch("/api/demo/preview").then((r) => r.json())]);
     $("#desc").value = c.description; $("#bill").value = c.bill_kwh; imgStatus("ok", "Gallery image: Food plant (Delta Foods)");
-    const p = $("#live"); p.textContent = c.meta_live ? "Meta API live" : "demo mode (no Meta key)"; if (c.meta_live) p.classList.add("on");
     S.hourA = S.hourB = pv.hourly; S.partsA = S.partsB = pv.parts; Factory.setSpecs(pv.spec, pv.spec, pv.parts, pv.parts, pv.hourly, pv.hourly); refreshAll(); Factory.start();
     caption("Energy twin", "Press Demo for an instant pre-computed twin, or Build the twin for a live run.");
   }
