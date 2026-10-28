@@ -115,6 +115,7 @@ function showResult(res) {
   $("#summary").textContent = res.summary;
   $("#critic").innerHTML = "<b>Critic:</b> " + (res.critic.challenges || []).slice(0, 3).map((c) => `<div>• ${String(c.concern).replace(/</g, "&lt;")} <span class="muted">(${c.severity})</span></div>`).join("");
   loadAfter = e.hourly_after; loadBefore = e.hourly_before; drawLoad();
+  if (calSpec) Twin3D.setSpecs(calSpec, res.spec_after, e.hourly_before, e.hourly_after);
   if (window.gsap && !reduce) gsap.from("#tiles .tile", { opacity: 0, y: 10, stagger: .06, duration: .4 });
 }
 
@@ -132,10 +133,11 @@ function handle(ev) {
     case "loop":
       iters = ev.iter; calib.bill = ev.bill_kwh; calib.twin.push(ev.twin_kwh); drawCalibration();
       loadBefore = ev.hourly; loadAfter = null; drawLoad();
+      calSpec = ev.spec; Twin3D.setSpecs(ev.spec, ev.spec, ev.hourly, ev.hourly);
       nodeEl.calibrate.badge.textContent = "loop " + ev.iter;
       $("#calnote").textContent = `Iteration ${ev.iter}: twin ${fmt(ev.twin_kwh)} vs bill ${fmt(ev.bill_kwh)} kWh (${ev.err_pct > 0 ? "+" : ""}${ev.err_pct}%)` + (Math.abs(ev.err_pct) <= 5 ? " — within 5%, calibrated" : " — adjusting…");
       pulse("calibrate", "calibrate"); break;
-    case "fix_round": renderFixes(ev.round, ev.results); pulse("hunt", "verify"); setTimeout(() => pulse("verify", "hunt"), 700); break;
+    case "fix_round": renderFixes(ev.round, ev.results); if (calSpec) Twin3D.setSpecs(calSpec, ev.spec_after, ev.hourly_before, ev.hourly_after); pulse("hunt", "verify"); setTimeout(() => pulse("verify", "hunt"), 700); break;
     case "note": $("#calnote").textContent += "\n" + ev.text; break;
     case "gate": setState("gate", "running"); showResult(ev.result); break;
     case "decision": $("#decided").textContent = "Engineer decision recorded: " + ev.action; setState("gate", "done"); break;
@@ -167,7 +169,16 @@ document.querySelectorAll(".btns button").forEach((b) => b.addEventListener("cli
 }));
 $("#run").addEventListener("click", start);
 
+let calSpec = null, view = "twin";
+function setView(v) {
+  view = v; $("#twin").hidden = v !== "twin"; $("#graph").hidden = v === "twin";
+  $("#tab-twin").classList.toggle("on", v === "twin"); $("#tab-flow").classList.toggle("on", v !== "twin");
+  if (v === "twin") Twin3D.start(); else Twin3D.stop();
+}
+$("#tab-twin").onclick = () => setView("twin"); $("#tab-flow").onclick = () => setView("flow");
 (async () => {
+  Twin3D.init($("#twin"));
+  const pv = await (await fetch("/api/demo/preview")).json(); Twin3D.setSpecs(pv.spec, pv.spec, pv.hourly, pv.hourly); loadBefore = pv.hourly; drawLoad(); setView("twin");
   buildGraph();
   const c = await (await fetch("/api/demo/case")).json();
   demoDesc = c.description; $("#desc").value = c.description; $("#bill").value = c.bill_kwh;

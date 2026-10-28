@@ -9,6 +9,7 @@
 <body>
 <header>
   <div class="brand"><span class="logo">⚡</span><b>WattLoop</b><span class="tag">an energy twin that tests its own fixes</span></div>
+  <div class="tabs"><button id="tab-twin" class="on">Live twin</button><button id="tab-flow">Agent workflow</button></div>
   <div class="hdr-right"><span id="live" class="pill">checking…</span><span class="pill warn">Simulated estimates · engineer must verify on site</span></div>
 </header>
 <main>
@@ -28,7 +29,8 @@
     </div>
   </aside>
   <section class="center">
-    <svg id="graph" viewBox="0 0 900 640"></svg>
+    <div id="twin" class="twinbox"></div>
+    <svg id="graph" viewBox="0 0 900 640" hidden></svg>
   </section>
   <aside class="right">
     <div class="card"><h3>Daily load (kW)</h3><svg id="loadchart" viewBox="0 0 320 150"></svg>
@@ -47,7 +49,9 @@
     <div class="card stats"><span id="stat">0 calls · $0.0000 · 0.0 s</span></div>
   </aside>
 </main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/static/twin3d.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

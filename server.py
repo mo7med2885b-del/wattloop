@@ -40,6 +40,14 @@ def demo_case():
     return {"description": c["description"], "bill_kwh": c["bill_kwh"], "shift": {"start": 6, "end": 22, "days_per_week": 6}, "meta_live": meta.available()}
 
 
+@app.get("/api/demo/preview")
+def preview():
+    from wattloop import twin
+    shift = {"start": 6, "end": 22, "days_per_week": 6}
+    spec = pipeline.generic_spec(shift)
+    return {"spec": spec, "hourly": [round(v, 1) for v in twin.hourly_kw(spec)]}
+
+
 @app.post("/api/run")
 def start(req: RunReq):
     if req.use_demo or not req.description:

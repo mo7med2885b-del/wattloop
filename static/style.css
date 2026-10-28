@@ -30,3 +30,13 @@ button.primary{width:100%;background:linear-gradient(90deg,#1aa79b,#2f7bff);bord
 .gate{margin-top:8px;padding:10px;border:1px dashed rgba(245,184,74,.5);border-radius:10px}.btns{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
 .stats{font-size:12px;color:var(--mut);text-align:center}
 @media(prefers-reduced-motion:reduce){.node.running .ring{animation:none}}
+
+.tabs{display:flex;gap:6px}.tabs button{border-radius:99px;padding:6px 14px}.tabs button.on{background:linear-gradient(90deg,#1aa79b,#2f7bff);border:0;font-weight:600}
+.twinbox{position:relative;height:calc(100vh - 110px);min-height:700px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#06141a;touch-action:none;cursor:grab}
+#graph[hidden],.twinbox[hidden]{display:none}
+.tw-hud{position:absolute;inset:0;pointer-events:none;font-size:12.5px}
+.tw-half{position:absolute;left:0;right:0;height:50%;display:flex;justify-content:space-between;align-items:flex-start;padding:10px 12px}.tw-half.top{top:0}.tw-half.bot{top:50%;border-top:1px solid var(--line)}
+.tw-tag{border-radius:99px;padding:4px 12px;background:rgba(6,26,32,.75);border:1px solid var(--line)}.tw-tag.b{color:var(--ok);border-color:rgba(67,214,138,.5)}.tw-tag.a{color:#ffb4a8;border-color:rgba(255,138,122,.5)}
+.tw-read{background:rgba(6,26,32,.8);border:1px solid var(--line);border-radius:10px;padding:5px 12px;font-weight:600;font-size:15px}
+.tw-clock{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(6,26,32,.9);border:1px solid var(--line);border-radius:99px;padding:4px 14px;color:var(--mut)}.tw-clock b{color:var(--tx);font-size:15px}
+.tw-hint{position:absolute;bottom:6px;width:100%;text-align:center;color:var(--mut);font-size:11px}

@@ -192,7 +192,7 @@ def calibrate_loop(run: Run, spec: dict, bill: float):
         kwh = twin.monthly_kwh(spec)
         err = (kwh - bill) / bill * 100
         run.emit("loop", name="calibration", iter=it, twin_kwh=round(kwh), bill_kwh=round(bill), err_pct=round(err, 1),
-                 hourly=[round(v, 1) for v in twin.hourly_kw(spec)], breakdown=twin.breakdown_kwh(spec))
+                 hourly=[round(v, 1) for v in twin.hourly_kw(spec)], breakdown=twin.breakdown_kwh(spec), spec=spec)
         if abs(err) <= 5:
             break
         if it == 5:
@@ -279,7 +279,8 @@ def hunt_and_verify(run: Run, spec: dict):
                 results.append({"fix": test, "why": f["why"], "status": status, "reason": reason, "saved_egp_year": 0, "saved_kwh_month": 0})
             if status == "rejected":
                 feedback_parts.append(f"{test}: {reason}")
-        run.emit("fix_round", round=rnd, results=results)
+        cur = twin.evaluate(spec, accepted)
+        run.emit("fix_round", round=rnd, results=results, spec_after=cur["spec"], hourly_after=cur["hourly_after"], hourly_before=cur["hourly_before"])
         run.emit("node_done", node="verify", ms=5, usd=0, model=None, fallback=False, output={"accepted": len(accepted), "rejected": len(feedback_parts)})
         feedback = " | ".join(feedback_parts)
         if not feedback_parts:
