@@ -13,7 +13,7 @@
     <div class="logo"><svg viewBox="0 0 28 28" width="28" height="28"><path d="M9 6 L4 6 L4 22 L9 22 M19 6 L24 6 L24 22 L19 22" fill="none" stroke="#ff6a00" stroke-width="2.4"/><circle cx="14" cy="14" r="3" fill="#ff6a00"/></svg>
       <div><b>WattLoop</b><small>Energy Management System</small></div></div>
     <nav class="scenes" id="scenes"><button data-m="now" class="on">Plant now</button><button data-m="after">After verified fixes</button><button data-m="compare">Compare</button></nav>
-    <div class="top-right"><button class="demobtn" id="demoBtn" title="Load a pre-computed twin instantly (no AI call)">▶ Demo</button><span class="chip" id="live">checking…</span><span class="clock"><b id="clock">06:00:00</b><i id="dayTag">simulated day</i></span><button class="wfbtn" id="wfOpen"><img src="/static/assets/meta-symbol-color.png" alt="">Agent workflow</button></div>
+    <div class="top-right"><button class="themebtn" id="themeBtn" title="Light / dark mode">◐</button><button class="demobtn" id="demoBtn" title="Load a pre-computed twin instantly (no AI call)">▶ Demo</button><span class="chip" id="live">checking…</span><span class="clock"><b id="clock">06:00:00</b><i id="dayTag">simulated day</i></span><button class="wfbtn" id="wfOpen"><img src="/static/assets/meta-symbol-color.png" alt="">Agent workflow</button></div>
   </header>
 
   <div class="main">
@@ -38,6 +38,8 @@
       <div id="iso" class="iso"></div>
       <svg id="leaders" class="leaders"></svg>
       <div id="callouts" class="callouts"></div>
+      <div class="loader" id="loader" hidden><div class="lcard"><div class="ring"></div><b id="loadT">Rebuilding the twin from your image</b><span id="loadS" class="muted small">The models read the photo; the plant is rebuilt machine by machine.</span>
+        <ol class="lsteps" id="lsteps"><li data-n="scene">Checking the image</li><li data-n="vision">Reading the equipment</li><li data-n="segment">Locating machines (SAM 3.1)</li><li data-n="engineer">Writing the twin</li></ol><div class="lbar"><i></i></div></div></div>
       <div class="caption" id="caption"><b id="capT">Energy twin</b><span id="capS">Choose an image and press Build the twin.</span></div>
       <div class="vg" id="vg" hidden><div class="vgt">Maximum</div><div class="vgbar"><i id="vgfill"></i><em id="vgknob"></em></div><div class="vgt">Minimum</div><div class="vgv" id="vgv">–</div><div class="vgn" id="vgn">–</div></div>
       <button class="overview" id="overview" hidden>⟲ Overview</button>
@@ -78,7 +80,7 @@
     <button class="wf-home" id="wfHome" type="button">← Home</button>
     <div class="wf-brand"><img src="/static/assets/meta-symbol-color.png" alt=""><div><h2>Agent workflow</h2><div class="sub">Every node animates only from a real run event</div></div></div>
     <span class="sp"></span>
-    <span class="wf-model" id="wfModelChip"><img src="/static/assets/meta-symbol-color.png" alt=""><span id="wfModel">Muse Spark 1.3</span></span>
+    <button class="wf-theme" id="wfTheme" type="button" title="Light / dark mode">◐</button><span class="wf-model" id="wfModelChip"><img src="/static/assets/meta-symbol-color.png" alt=""><span id="wfModel">Muse Spark 1.3</span></span>
     <button class="wf-run" id="wfRun" type="button">Run workflow</button>
     <button class="wf-close" id="wfClose" type="button" aria-label="Close">×</button>
   </header>

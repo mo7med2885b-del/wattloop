@@ -30,7 +30,7 @@ const WF = (() => {
   const view = { k: 1, x: 0, y: 0 };
   let svg, layer, nodes = {}, lines = {}, icons = {}, results = {}, breathe = null, t0 = 0, done = 0, calls = 0, cost = 0, rej = 0, modelLabel = "Muse Spark 1.3";
   const $$ = (id) => document.getElementById(id);
-  const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.append(e); return e; };
+  const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) { const v = attrs[k]; if (typeof v === "string" && v.startsWith("var(")) e.style.setProperty(k, v); else e.setAttribute(k, v); } if (parent) parent.append(e); return e; };
   const pretty = (m) => (m || "").replace(/^muse-spark-/, "Muse Spark ").replace(/^muse-/, "Muse ").replace(/^sam-/, "SAM ") || "Muse Spark 1.3";
   const nameOf = (id) => (DEF.find((d) => d[0] === id) || [])[1] || (id === "core" ? "Orchestrator" : id);
 
@@ -70,9 +70,9 @@ const WF = (() => {
     const f = el("filter", { id: "wfGlow", x: "-80%", y: "-80%", width: "260%", height: "260%" }, defs);
     el("feGaussianBlur", { stdDeviation: "3.2", result: "b" }, f); const m = el("feMerge", {}, f); el("feMergeNode", { in: "b" }, m); el("feMergeNode", { in: "SourceGraphic" }, m);
     const lg = el("linearGradient", { id: "wfLineGrad", gradientUnits: "userSpaceOnUse", x1: 0, y1: 0, x2: 0, y2: 860 }, defs);
-    el("stop", { offset: "0", "stop-color": "#7fd3ff" }, lg); el("stop", { offset: "0.55", "stop-color": "#8be0cf" }, lg); el("stop", { offset: "1", "stop-color": "#ffd27a" }, lg);
-    const cg = el("linearGradient", { id: "wfCardGrad", x1: 0, y1: 0, x2: 1, y2: 1 }, defs); el("stop", { offset: "0", "stop-color": "#1c4a45", "stop-opacity": ".75" }, cg); el("stop", { offset: "1", "stop-color": "#08201f", "stop-opacity": ".92" }, cg);
-    const hc = el("linearGradient", { id: "wfCardHuman", x1: 0, y1: 0, x2: 1, y2: 1 }, defs); el("stop", { offset: "0", "stop-color": "#5a3a12", "stop-opacity": ".8" }, hc); el("stop", { offset: "1", "stop-color": "#1f1406", "stop-opacity": ".94" }, hc);
+    el("stop", { offset: "0", "stop-color": "var(--or)" }, lg); el("stop", { offset: "0.55", "stop-color": "var(--or2)" }, lg); el("stop", { offset: "1", "stop-color": "var(--warn)" }, lg);
+    const cg = el("linearGradient", { id: "wfCardGrad", x1: 0, y1: 0, x2: 1, y2: 1 }, defs); el("stop", { offset: "0", "stop-color": "var(--card1)", "stop-opacity": ".95" }, cg); el("stop", { offset: "1", "stop-color": "var(--card2)", "stop-opacity": ".97" }, cg);
+    const hc = el("linearGradient", { id: "wfCardHuman", x1: 0, y1: 0, x2: 1, y2: 1 }, defs); el("stop", { offset: "0", "stop-color": "var(--hcard1)", "stop-opacity": ".95" }, hc); el("stop", { offset: "1", "stop-color": "var(--hcard2)", "stop-opacity": ".97" }, hc);
     const og = el("radialGradient", { id: "wfOrb", cx: "38%", cy: "32%", r: "75%" }, defs); el("stop", { offset: "0", "stop-color": "#c9dcff" }, og); el("stop", { offset: "0.45", "stop-color": "#4d7dff" }, og); el("stop", { offset: "1", "stop-color": "#0b1d6e" }, og);
     const hg = el("radialGradient", { id: "wfHalo" }, defs); el("stop", { offset: "0.5", "stop-color": "#4d9bff", "stop-opacity": ".55" }, hg); el("stop", { offset: "1", "stop-color": "#4d9bff", "stop-opacity": "0" }, hg);
     Object.keys(EDGES).forEach((id) => { lines[id] = el("path", { class: "wf-line" + (id === "intake" ? "" : id === "verify_hunt" ? " faint" : ""), d: "" }, layer); });

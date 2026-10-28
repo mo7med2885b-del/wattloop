@@ -4,13 +4,16 @@
 window.Factory = (function () {
   const T = THREE;
   const OR = 0xff6a00, GR = 0x35e08a, BODY = 0x1b1e22, DARK = 0x111316, EDGE = 0xaeb4ba;
+  let LIGHT = false;  // light mode lightens dark machine bodies and darkens edge lines; accents stay orange / green
   let renderer, cam, clock, box, canvas, calloutsEl, leadersEl, running = false;
   const S = { specA: null, specB: null, partsA: {}, partsB: {}, hourA: [], hourB: [], mode: "now", paused: false, day: 6 / 24, focus: null };
   const W = { A: null, B: null };
   const orbit = { az: 0.62, el: 0.5, dist: 46, tx: 0, ty: 1.2, tz: 0 };
   let drag = null, DAY = 36, lastDom = 0, cos = {}, onFrame = null, onFocus = null, dust = null;
-  const mat = (c, o = {}) => new T.MeshStandardMaterial({ color: c, roughness: .38, metalness: .6, ...o });
-  function edges(mesh, col = EDGE, op = .55) { const e = new T.LineSegments(new T.EdgesGeometry(mesh.geometry, 28), new T.LineBasicMaterial({ color: col, transparent: true, opacity: op })); mesh.add(e); mesh.userData.edge = e; return mesh; }
+  const tone = (c) => { if (!LIGHT) return c; const k = new T.Color(c); if (k.r * .3 + k.g * .59 + k.b * .11 > .3) return c; return k.lerp(new T.Color(0xffffff), .8).getHex(); };
+  const mat = (c, o = {}) => new T.MeshStandardMaterial({ color: tone(c), roughness: LIGHT ? .55 : .38, metalness: LIGHT ? .2 : .6, ...o });
+  let STATIC = false;  // platform pieces are not animated when the machines assemble
+  function edges(mesh, col = EDGE, op = .55) { mesh.userData.part = true; mesh.userData.static = STATIC; if (LIGHT && col !== OR && col !== GR) { col = 0x3f474f; op = Math.min(1, op + .25); } const e = new T.LineSegments(new T.EdgesGeometry(mesh.geometry, 28), new T.LineBasicMaterial({ color: col, transparent: true, opacity: op })); mesh.add(e); mesh.userData.edge = e; return mesh; }
   const mk = (geo, col, ec, op) => edges(new T.Mesh(geo, mat(col)), ec, op);
   const Box = (w, h, d, col = BODY, ec, op) => mk(new T.BoxGeometry(w, h, d), col, ec, op);
   const Cyl = (r, h, col = BODY, ec, seg = 22, op) => mk(new T.CylinderGeometry(r, r, h, seg), col, ec, op);
@@ -35,17 +38,19 @@ window.Factory = (function () {
 
   function build(spec, after) {
     const sc = new T.Scene(), w = { sc, spec, after, anchors: {}, lights: [], glows: [], pumps: [], boxes: [], pv: [], flows: {}, heat: {}, fills: {}, leaks: null, fan: null, stby: null };
-    sc.background = new T.Color(0x08090a); sc.fog = new T.Fog(0x08090a, 55, 120);
-    const amb = new T.AmbientLight(0xb8c4d0, .42); sc.add(amb); w.amb = amb;
+    const bg = LIGHT ? 0xe9ecf0 : 0x08090a; sc.background = new T.Color(bg); sc.fog = new T.Fog(bg, 55, 120);
+    const amb = new T.AmbientLight(0xb8c4d0, LIGHT ? .9 : .42); sc.add(amb); w.amb = amb;
     const sun = new T.DirectionalLight(0xffe2c0, .8); sun.position.set(-12, 22, 14); sc.add(sun); w.sun = sun;
     const rim = new T.DirectionalLight(0x6a8cff, .35); rim.position.set(14, 10, -16); sc.add(rim);
+    STATIC = true;
     // platform: slab, fine grid, orange perimeter like the reference
     const slab = new T.Mesh(new T.BoxGeometry(34, 1, 23), mat(0x0f1113, { roughness: .8, metalness: .2 })); slab.position.y = -.5; edges(slab, 0x3a3e44, .8); sc.add(slab);
-    const grid = new T.GridHelper(34, 34, 0x24272b, 0x1a1c1f); grid.position.y = .02; grid.scale.z = 23 / 34; sc.add(grid);
+    const grid = new T.GridHelper(34, 34, LIGHT ? 0xb9c0c7 : 0x24272b, LIGHT ? 0xd0d5db : 0x1a1c1f); grid.position.y = .02; grid.scale.z = 23 / 34; sc.add(grid);
     const per = zoneOutline(sc, 0, 0, 33.4, 22.4, 0x7a3300); per.material.opacity = .02;
     // distant structures for context (tanks and sheds), like the wider factory in the reference
     [[-22, -9, 3, 6], [-26, 3, 2.4, 4], [22, -12, 3.4, 7], [27, 2, 2.2, 5]].forEach(([x, z, r, h]) => { const t = Cyl(r, h, 0x15181b, 0x5a5f66, 24, .5); t.position.set(x, h / 2, z); sc.add(t); });
     [[-24, 12, 6, 3, 5], [24, 14, 7, 2.5, 5]].forEach(([x, z, bw, bh, bd]) => { const b = Box(bw, bh, bd, 0x14171a, 0x5a5f66, .5); b.position.set(x, bh / 2, z); sc.add(b); });
+    STATIC = false;
     const byType = (t) => spec.components.filter((c) => c.type === t);
     const zc = (c) => (after && isFixed[c.type](c) ? GR : OR);
     const zone = (c, cx, cz, zw, zd) => { w.fills[c.id] = zoneOutline(sc, cx, cz, zw, zd, zc(c)); w.anchors[c.id] = new T.Vector3(cx, 2.2, cz); w.zones = w.zones || {}; w.zones[c.id] = [cx, cz]; };
@@ -122,7 +127,7 @@ window.Factory = (function () {
 
   function animate(w, hour, dt, parts) {
     const sp = w.spec, sh = sp.shift, t = performance.now() / 1000, day = hour >= 6 && hour < 18, sunk = day ? Math.sin((hour - 6) / 12 * Math.PI) : 0;
-    w.amb.intensity = .36 + .22 * sunk; w.sun.intensity = .4 + .6 * sunk;
+    w.amb.intensity = (LIGHT ? .7 : .36) + .22 * sunk; w.sun.intensity = (LIGHT ? .35 : .4) + .6 * sunk;
     const c = (ty) => sp.components.find((x) => x.type === ty), L = c("lighting"), P = c("pump"), C = c("compressor"), M = c("motors"), H = c("hvac");
     let lit = false;
     if (L) { lit = active(L, hour, sh); if (!lit && !L.controls && L.after_hours_h > 0) lit = ((hour - sh.end + 24) % 24) < L.after_hours_h; }
@@ -206,8 +211,16 @@ window.Factory = (function () {
     }
     if (onFrame) onFrame({ hour, partsA: S.partsA, partsB: S.partsB, hourA: S.hourA, hourB: S.hourB, mode: S.mode, focus: S.focus });
   }
+  let assemble = false;
+  function assembleIn(w) {
+    if (!w || !window.gsap) return; const parts = []; w.sc.traverse((o) => { if (o.isMesh && o.userData.part && !o.userData.static) parts.push(o); });
+    parts.sort((a, b) => (a.getWorldPosition(new T.Vector3()).x + a.getWorldPosition(new T.Vector3()).z * .3) - (b.getWorldPosition(new T.Vector3()).x + b.getWorldPosition(new T.Vector3()).z * .3));
+    parts.forEach((m, i) => { const s = m.scale.clone(); m.scale.setScalar(.001); gsap.to(m.scale, { x: s.x, y: s.y, z: s.z, duration: .55, delay: .15 + i * .022, ease: "back.out(1.6)" }); });
+    Object.values(w.fills).forEach((f) => { const o = f.material.opacity; f.material.opacity = 0; gsap.to(f.material, { opacity: o, duration: 1, delay: .6 }); });
+  }
   function rebuild() {
     disposeW(W.A); disposeW(W.B); W.A = S.specA ? build(S.specA, false) : null; W.B = S.specB ? build(S.specB, true) : null;
+    if (assemble && (W.A || W.B)) { assemble = false; assembleIn(W.A); assembleIn(W.B); }
     buildCallouts(S.mode === "after" ? S.specB : S.specA);
   }
   const api = {
@@ -223,7 +236,7 @@ window.Factory = (function () {
     },
     start() { if (!running) { running = true; clock.getDelta(); frame(); } }, stop() { running = false; },
     setSpecs(a, b, pa, pb, ha, hb) { S.specA = a; S.specB = b || a; S.partsA = pa || S.partsA; S.partsB = pb || pa || S.partsB; S.hourA = ha || S.hourA; S.hourB = hb || ha || S.hourB; rebuild(); },
-    setMode(m) { S.mode = m; rebuild(); }, togglePause() { S.paused = !S.paused; return S.paused; },
+    expectAssemble() { assemble = true; }, setTheme(light) { LIGHT = !!light; rebuild(); }, setMode(m) { S.mode = m; rebuild(); }, togglePause() { S.paused = !S.paused; return S.paused; },
     focus(id) {
       S.focus = id; const w = S.mode === "after" ? W.B : W.A;
       const to = id && w && w.anchors[id] ? { tx: w.anchors[id].x, ty: Math.min(2.5, w.anchors[id].y * .6), tz: w.anchors[id].z, dist: 15, el: .42 } : { tx: 0, ty: 1.2, tz: 0, dist: 46, el: .5 };
