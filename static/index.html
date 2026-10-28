@@ -4,13 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>WattLoop</title>
+<link rel="icon" type="image/png" href="/static/assets/favicon.png">
 <link rel="stylesheet" href="/static/style.css">
 <link rel="stylesheet" href="/static/flow.css">
 </head>
 <body>
 <div class="app">
   <header class="top">
-    <div class="logo"><svg viewBox="0 0 28 28" width="28" height="28"><path d="M9 6 L4 6 L4 22 L9 22 M19 6 L24 6 L24 22 L19 22" fill="none" stroke="#ff6a00" stroke-width="2.4"/><circle cx="14" cy="14" r="3" fill="#ff6a00"/></svg>
+    <div class="logo"><img src="/static/assets/logo.png" alt="WattLoop logo" width="32" height="32">
       <div><b>WattLoop</b><small>Energy Management System</small></div></div>
     <nav class="scenes" id="scenes"><button data-m="now" class="on">Plant now</button><button data-m="after">After verified fixes</button><button data-m="compare">Compare</button></nav>
     <div class="top-right"><button class="themebtn" id="themeBtn" title="Light / dark mode">◐</button><button class="demobtn" id="demoBtn" title="Load a pre-computed twin instantly (no AI call)">▶ Demo</button><span class="clock"><b id="clock">06:00:00</b><i id="dayTag">simulated day</i></span><button class="wfbtn" id="wfOpen"><img src="/static/assets/meta-symbol-color.png" alt="">Agent workflow</button></div>

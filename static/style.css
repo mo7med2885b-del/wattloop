@@ -161,3 +161,5 @@ button.primary.danger{background:var(--bad);color:#fff}
 
 .grip{cursor:ns-resize;background:var(--bg2);border-top:1px solid var(--line);display:grid;place-items:center;touch-action:none}.grip i{display:block;width:54px;height:4px;border-radius:4px;background:var(--line2);transition:background .2s}.grip:hover i,.grip.drag i{background:var(--or)}
 .strip{overflow:hidden}.app.stripOff{--sh:0px}.app.stripOff .strip{border:0}
+
+.logo img{border-radius:8px;display:block}
