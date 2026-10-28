@@ -1,0 +1,32 @@
+:root{--bg:#06141a;--panel:rgba(20,52,60,.55);--line:rgba(120,200,210,.18);--tx:#e6f4f4;--mut:#8fb0b4;--acc:#35d0c0;--blue:#2f7bff;--ok:#43d68a;--warn:#f5b84a;--bad:#ff6a6a;--viol:#9a7bff}
+@media (prefers-color-scheme:light){:root:not([data-force]){--bg:#06141a}}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(1200px 700px at 50% -10%,#0d3a40 0,var(--bg) 60%);color:var(--tx);font:14px/1.45 system-ui,Segoe UI,sans-serif;min-height:100vh}
+header{display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);flex-wrap:wrap;gap:8px}
+.brand{display:flex;align-items:center;gap:10px}.logo{font-size:22px}.brand b{font-size:18px;letter-spacing:.3px}.tag{color:var(--mut);font-size:13px}
+.pill{border:1px solid var(--line);border-radius:99px;padding:3px 10px;font-size:12px;color:var(--mut)}.pill.warn{color:var(--warn);border-color:rgba(245,184,74,.4)}.pill.on{color:var(--ok);border-color:rgba(67,214,138,.4)}
+main{display:grid;grid-template-columns:320px minmax(420px,1fr) 340px;gap:14px;padding:14px 16px;align-items:start}
+@media(max-width:1100px){main{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:12px;backdrop-filter:blur(8px)}
+.card h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--mut);font-weight:600}
+.photo{position:relative;border-radius:10px;overflow:hidden;margin-bottom:8px;border:1px solid var(--line)}.photo img{width:100%;display:block}.photo svg{position:absolute;inset:0;width:100%;height:100%}
+label{display:block;font-size:12px;color:var(--mut);margin:8px 0}textarea,input{width:100%;margin-top:4px;background:#0a2128;border:1px solid var(--line);color:var(--tx);border-radius:8px;padding:8px;font:inherit}
+button{background:#12303a;color:var(--tx);border:1px solid var(--line);border-radius:9px;padding:8px 12px;cursor:pointer;font:inherit}button:hover{border-color:var(--acc)}
+button.primary{width:100%;background:linear-gradient(90deg,#1aa79b,#2f7bff);border:0;font-weight:600;padding:11px}button:disabled{opacity:.5;cursor:default}
+.muted{color:var(--mut)}.small{font-size:12.5px}
+#graph{width:100%;height:auto;background:rgba(8,28,34,.45);border:1px solid var(--line);border-radius:16px}
+.edge{stroke:rgba(120,200,210,.28);stroke-width:2;fill:none}.edge.hot{stroke:var(--acc);stroke-width:2.5}
+.node rect{fill:rgba(18,56,64,.85);stroke:var(--line);stroke-width:1.5;rx:14}.node{cursor:pointer}
+.node text.t{fill:var(--tx);font-size:14px;font-weight:600}.node text.s{fill:var(--mut);font-size:11px}
+.node.running rect{stroke:var(--acc);stroke-width:2.5;filter:drop-shadow(0 0 8px rgba(53,208,192,.7))}
+.node.done rect{stroke:var(--ok)}.node.fallback rect{stroke:var(--warn)}.node.error rect{stroke:var(--bad)}
+.node .ring{fill:none;stroke:var(--viol);stroke-width:2;stroke-dasharray:30 400;opacity:0}.node.running .ring{opacity:1;animation:orbit 1.6s linear infinite}
+@keyframes orbit{to{stroke-dashoffset:-430}}
+.badge{fill:var(--viol);font-size:11px;font-weight:700}
+.pulse{fill:var(--acc);filter:drop-shadow(0 0 6px var(--acc))}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}.tile{background:#0a2128;border:1px solid var(--line);border-radius:10px;padding:8px}.tile b{display:block;font-size:19px}.tile span{font-size:11px;color:var(--mut)}
+.fixes .row{padding:6px 8px;border-radius:8px;margin-bottom:5px;border:1px solid var(--line);background:#0a2128}.fixes .ok{border-color:rgba(67,214,138,.5)}.fixes .no{border-color:rgba(245,184,74,.6);background:rgba(245,184,74,.08)}
+.fixes .rnd{color:var(--mut);font-size:11px;margin:6px 0 3px}
+.legend{font-size:12px;color:var(--mut)}.d{display:inline-block;width:10px;height:10px;border-radius:3px;margin:0 4px 0 8px}.d.b{background:#ff8a7a}.d.a{background:var(--ok)}
+.gate{margin-top:8px;padding:10px;border:1px dashed rgba(245,184,74,.5);border-radius:10px}.btns{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.stats{font-size:12px;color:var(--mut);text-align:center}
+@media(prefers-reduced-motion:reduce){.node.running .ring{animation:none}}

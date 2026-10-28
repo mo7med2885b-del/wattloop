@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WattLoop</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <div class="brand"><span class="logo">⚡</span><b>WattLoop</b><span class="tag">an energy twin that tests its own fixes</span></div>
+  <div class="hdr-right"><span id="live" class="pill">checking…</span><span class="pill warn">Simulated estimates · engineer must verify on site</span></div>
+</header>
+<main>
+  <aside class="left">
+    <div class="card">
+      <h3>Facility</h3>
+      <div class="photo"><img id="photo" src="/api/demo/image" alt="synthetic demo plant"><svg id="overlay" viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg></div>
+      <label>Description <textarea id="desc" rows="6" autocomplete="off"></textarea></label>
+      <label>Monthly electricity bill (kWh) <input id="bill" type="number" autocomplete="off"></label>
+      <button id="run" class="primary">Build the twin</button>
+      <p class="muted small">Demo uses a synthetic plant. No real facility data.</p>
+    </div>
+    <div class="card" id="calcard">
+      <h3>Twin vs the real bill</h3>
+      <svg id="calchart" viewBox="0 0 320 150"></svg>
+      <div id="calnote" class="muted small">Waiting…</div>
+    </div>
+  </aside>
+  <section class="center">
+    <svg id="graph" viewBox="0 0 900 640"></svg>
+  </section>
+  <aside class="right">
+    <div class="card"><h3>Daily load (kW)</h3><svg id="loadchart" viewBox="0 0 320 150"></svg>
+      <div class="legend"><i class="d b"></i>before <i class="d a"></i>after fixes</div></div>
+    <div class="card"><h3>Fix attempts</h3><div id="fixes" class="fixes muted small">No attempts yet.</div></div>
+    <div class="card" id="result" hidden>
+      <h3>Verified in the twin</h3>
+      <div class="tiles" id="tiles"></div>
+      <p id="summary" class="small"></p>
+      <div id="critic" class="small"></div>
+      <div class="gate"><b>REQUIRES ENGINEER REVIEW</b>
+        <div class="btns"><button data-a="approve">Approve for site audit</button><button data-a="modify">Modify</button><button data-a="reject">Reject</button></div>
+        <div id="decided" class="muted small"></div></div>
+    </div>
+    <div class="card"><h3>Agent detail</h3><div id="detail" class="small muted">Click a node.</div></div>
+    <div class="card stats"><span id="stat">0 calls · $0.0000 · 0.0 s</span></div>
+  </aside>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
