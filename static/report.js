@@ -3,11 +3,12 @@
 const Report = (() => {
   const OR = [255, 106, 0], DK = [24, 27, 31], GR = [16, 152, 90], MUT = [95, 103, 112];
   const f0 = (n) => Math.round(+n || 0).toLocaleString("en-US"), f1 = (n) => (+n || 0).toFixed(1);
-  const ascii = (s) => String(s == null ? "" : s).replace(/[‒-―]/g, "-").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/×/g, "x").replace(/[^\x20-\x7e°]/g, "");
+  const ascii = (s) => String(s == null ? "" : s).replace(/[‒-―]/g, "-").replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/×/g, "x").replace(/[^\x20-\x7e°\n]/g, "");
 
   function imgToDataUrl(src, max = 900) {
     return new Promise((res) => { const im = new Image(); im.crossOrigin = "anonymous"; im.onload = () => { const k = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); res({ url: c.toDataURL("image/jpeg", .85), w: c.width, h: c.height }); }; im.onerror = () => res(null); im.src = src; });
   }
+  const probName = (f) => ({ vsd_pump: "Throttled pumps", repair_leaks: "Compressed-air leaks", led_retrofit: "Inefficient lighting", lighting_controls: "Lights on after hours", hvac_setpoint: "Over-cooling", standby_shutdown: "Idle machines left on", solar_pv: "Unused daytime solar potential" }[f.type] || f.type);
   const fixName = (f) => ({ vsd_pump: "Variable-speed drive on pumps", repair_leaks: "Repair compressed-air leaks", led_retrofit: "LED lighting retrofit", lighting_controls: "Lighting controls (after-hours off)", hvac_setpoint: "Raise cooling setpoint", standby_shutdown: "Auto shut-down of idle machines", solar_pv: "Rooftop solar PV" }[f.type] || f.type.replace(/_/g, " "));
   function problem(f, spec) {
     const c = (id) => (spec.components || []).find((x) => x.id === f.target) || {};
@@ -65,7 +66,7 @@ const Report = (() => {
     // ---------------- page 2: problems, cost, timing
     doc.addPage(); head("Problems found, what they cost and when to fix them"); h2("1. Problems found (technical issue)");
     const detail = (result.plan_detail || []).slice();
-    doc.autoTable({ startY: y, margin: { left: M, right: M }, head: [["Problem", "Technical explanation", "Energy lost (kWh/month)"]], body: detail.map((d) => [ascii(fixName(d.fix)), ascii(problem(d.fix, specBefore || { components: [] })), f0(d.saved_kwh_month)]), styles: { fontSize: 8, cellPadding: 1.8, textColor: [40, 40, 40] }, headStyles: { fillColor: DK, textColor: 255 }, columnStyles: { 0: { cellWidth: 42, fontStyle: "bold" }, 2: { cellWidth: 30, halign: "right" } } });
+    doc.autoTable({ startY: y, margin: { left: M, right: M }, head: [["Problem", "Technical explanation", "Energy wasted (kWh/month)"]], body: detail.map((d) => [ascii(probName(d.fix)), ascii(problem(d.fix, specBefore || { components: [] })), f0(d.saved_kwh_month)]), styles: { fontSize: 8, cellPadding: 1.8, textColor: [40, 40, 40] }, headStyles: { fillColor: DK, textColor: 255 }, columnStyles: { 0: { cellWidth: 42, fontStyle: "bold" }, 2: { cellWidth: 30, halign: "right" } } });
     y = doc.lastAutoTable.finalY + 7; h2("2. What to fix, what it costs, and when");
     const rows = detail.map((d) => ({ d, w: when(d) })).sort((a, b) => a.w[0].localeCompare(b.w[0]));
     doc.autoTable({ startY: y, margin: { left: M, right: M }, head: [["When", "Fix", "Cost (EGP, estimate)", "Saves (EGP/year)", "Payback (months)"]], body: rows.map(({ d, w }) => [ascii(w[0] + "\n" + w[1]), ascii(fixName(d.fix)), f0(d.capex_egp), f0(d.saved_egp_year), d.payback_months == null ? "n/a" : f1(d.payback_months)]), styles: { fontSize: 8, cellPadding: 1.8, textColor: [40, 40, 40] }, headStyles: { fillColor: OR, textColor: [20, 10, 0] }, columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" } } });
