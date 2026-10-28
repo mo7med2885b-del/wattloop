@@ -7,9 +7,9 @@ TRUTH = {
     "name": "Delta Foods (synthetic demo plant)",
     "shift": {"start": 6, "end": 22, "days_per_week": 6},
     "components": [
-        {"id": "pumps", "type": "pump", "name": "Process water pumps", "count": 2, "rated_kw": 15.0, "hours": 16, "flow_demand": 0.6, "vsd": False},
-        {"id": "air", "type": "compressor", "name": "Air compressor", "rated_kw": 55.0, "hours": 16, "air_demand": 0.5, "leak": 0.25},
-        {"id": "lights", "type": "lighting", "name": "Hall lighting (fluorescent)", "kw": 18.0, "hours": 16, "led": False, "after_hours_h": 4},
+        {"id": "pumps", "type": "pump", "name": "Process water pumps", "count": 2, "rated_kw": 15.0, "hours": 16, "flow_demand": 0.6, "vsd": False, "static_share": 0.3},
+        {"id": "air", "type": "compressor", "name": "Air compressor", "rated_kw": 55.0, "hours": 16, "air_demand": 0.5, "leak": 0.25, "control": "modulating"},
+        {"id": "lights", "type": "lighting", "name": "Hall lighting (fluorescent)", "kw": 18.0, "hours": 16, "led": False, "after_hours_h": 4, "legacy": "t8"},
         {"id": "hvac", "type": "hvac", "name": "Packing-room cooling", "kw": 60.0, "hours": 12, "setpoint_c": 21.0},
         {"id": "belts", "type": "motors", "name": "Conveyors and mixers", "kw": 40.0, "hours": 14, "load_factor": 0.6},
         {"id": "standby", "type": "standby", "name": "Idle equipment left on", "kw": 6.0},

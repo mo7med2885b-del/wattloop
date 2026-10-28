@@ -163,3 +163,10 @@ button.primary.danger{background:var(--bad);color:#fff}
 .strip{overflow:hidden}.app.stripOff{--sh:0px}.app.stripOff .strip{border:0}
 
 .logo img{border-radius:8px;display:block}
+
+.evbtn{background:transparent;border:1px solid var(--line2);color:var(--tx);padding:6px 12px;font-weight:700;font-size:12px}.evbtn:hover{border-color:var(--or)}
+.cmptag{display:none;position:absolute;top:44px;z-index:5;max-width:46%;padding:5px 10px;background:color-mix(in srgb,var(--pn) 90%,transparent);border:1px solid var(--line);font-size:11px}.cmptag b{display:block;letter-spacing:.05em}.cmptag span{color:var(--mut)}
+.cmptag.l{left:8px;border-left:3px solid var(--or)}.cmptag.r{right:8px;border-left:3px solid var(--ok)}.stage.cmp .cmptag{display:block}
+.evt{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0 12px}.evt th,.evt td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left}.evt th{background:var(--hd);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}
+.evh{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 10px}.evh div{background:var(--field);border:1px solid var(--line);padding:8px 10px}.evh b{display:block;font-size:22px;color:var(--or)}.evh span{font-size:11px;color:var(--mut)}
+.st-VERIFIED{color:var(--ok)}.st-PARTIAL{color:var(--warn)}.st-UNVERIFIED{color:var(--bad)}.evl{margin:6px 0;padding-left:18px;color:var(--mut);font-size:12px}

@@ -103,6 +103,17 @@ def preview():
     return {"spec": spec, "hourly": [round(v, 1) for v in twin.hourly_kw(spec)], "parts": twin._parts(spec, None)}
 
 
+_EVIDENCE: dict = {}
+
+
+@app.get("/api/evidence")
+def evidence():
+    from wattloop import validation
+    if not _EVIDENCE:
+        _EVIDENCE.update(validation.run())
+    return _EVIDENCE
+
+
 @app.get("/api/demo/instant")
 def demo_instant():
     """Pre-computed demo twin: real twin code and real verifier, no model call. Round 1 is deliberately over-aggressive so the rejection shows."""

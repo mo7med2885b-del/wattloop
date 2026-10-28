@@ -14,7 +14,7 @@
     <div class="logo"><img src="/static/assets/logo.png" alt="WattLoop logo" width="32" height="32">
       <div><b>WattLoop</b><small>Energy Management System</small></div></div>
     <nav class="scenes" id="scenes"><button data-m="now" class="on">Plant now</button><button data-m="after">After verified fixes</button><button data-m="compare">Compare</button></nav>
-    <div class="top-right"><button class="themebtn" id="themeBtn" title="Light / dark mode">◐</button><button class="demobtn" id="demoBtn" title="Load a pre-computed twin instantly (no AI call)">▶ Demo</button><span class="clock"><b id="clock">06:00:00</b><i id="dayTag">simulated day</i></span><button class="wfbtn" id="wfOpen"><img src="/static/assets/meta-symbol-color.png" alt="">Agent workflow</button></div>
+    <div class="top-right"><button class="themebtn" id="themeBtn" title="Light / dark mode">◐</button><button class="evbtn" id="evBtn" type="button" title="Scientific evidence behind the numbers">Evidence</button><button class="demobtn" id="demoBtn" title="Load a pre-computed twin instantly (no AI call)">▶ Demo</button><span class="clock"><b id="clock">06:00:00</b><i id="dayTag">simulated day</i></span><button class="wfbtn" id="wfOpen"><img src="/static/assets/meta-symbol-color.png" alt="">Agent workflow</button></div>
   </header>
 
   <div class="main" id="main">
@@ -23,7 +23,7 @@
         <div class="pb">
           <div class="photo"><img id="photo" src="/api/demo/image" alt="Synthetic demo plant"><svg id="overlay" viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg><span class="synth">synthetic image · Muse Image</span></div>
           <div class="picker"><button id="pick" type="button">Choose image ▾</button>
-            <div class="menu" id="pickMenu" hidden><button data-p="gallery" type="button">🖼 Image gallery</button><button data-p="upload" type="button">⬆ Upload your own</button></div>
+            <div class="menu" id="pickMenu" hidden><button data-p="gallery" type="button">🖼 Image gallery</button><button data-p="upload" type="button">⬆ Upload your own</button><button data-p="describe" type="button">✎ Describe the machines (no photo)</button></div>
             <input type="file" id="file" accept="image/jpeg,image/png,image/webp" hidden></div>
           <div id="imgstatus" class="imgstatus" hidden></div>
           <label>Description <span class="sub">(optional)</span><textarea id="desc" rows="4" autocomplete="off" placeholder="What do you know about the plant? Equipment, shifts, problems you hear or see."></textarea></label>
@@ -41,6 +41,7 @@
       <div id="callouts" class="callouts"></div>
       <div class="loader" id="loader" hidden><div class="lcard"><div class="ring"></div><b id="loadT">Rebuilding the twin from your image</b><span id="loadS" class="muted small">The models read the photo; the plant is rebuilt machine by machine.</span>
         <ol class="lsteps" id="lsteps"><li data-n="scene">Checking the image</li><li data-n="vision">Reading the equipment</li><li data-n="segment">Locating machines (SAM 3.1)</li><li data-n="engineer">Writing the twin</li></ol><div class="lbar"><i></i></div></div></div>
+      <div class="cmptag l" id="cmpL"><b>LEFT · THE REAL FACTORY TODAY</b><span>twin calibrated to your bill</span></div><div class="cmptag r" id="cmpR"><b>RIGHT · SAME FACTORY AFTER VERIFIED FIXES</b><span>simulated; an engineer must verify</span></div>
       <div class="caption" id="caption"><b id="capT">Energy twin</b><span id="capS">Choose an image and press Build the twin.</span></div>
       <div class="vg" id="vg" hidden><div class="vgt">Maximum</div><div class="vgbar"><i id="vgfill"></i><em id="vgknob"></em></div><div class="vgt">Minimum</div><div class="vgv" id="vgv">–</div><div class="vgn" id="vgn">–</div></div>
       <button class="overview" id="overview" hidden>⟲ Overview</button>
@@ -75,6 +76,8 @@
       <div class="cost"><div><b id="egp">–</b><span>EGP saved / year</span></div><div><b id="pay">–</b><span>payback (months)</span></div><div><b id="conf">–</b><span>confidence</span></div></div></div>
   </section>
 </div>
+
+<div class="modal" id="ev" hidden><div class="mcard"><div class="mh"><h3>Evidence behind the numbers</h3><span class="muted small">Component models checked against published data. Reproduce with <code>python -m wattloop.validation</code>.</span><button id="evClose" type="button" aria-label="Close">×</button></div><div id="evBody"></div></div></div>
 
 <div class="modal" id="gal" hidden><div class="mcard"><div class="mh"><h3>Image gallery</h3><span class="muted small">Synthetic factory images made with Muse Image. Each one is analysed live by the models when you pick it; nothing is pre-processed.</span><button id="galClose" type="button" aria-label="Close">×</button></div><div class="gg" id="galGrid"></div></div></div>
 

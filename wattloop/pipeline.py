@@ -111,11 +111,11 @@ def validate_spec(raw: dict, shift: dict) -> dict:
             return min(hi, max(lo, v))
         if t == "pump":
             out.update(count=int(num("count", 1)), rated_kw=num("rated_kw", 15), hours=min(n_shift, num("hours", n_shift)),
-                       flow_demand=num("flow_demand", 0.8), vsd=bool(c.get("vsd", False)))
+                       flow_demand=num("flow_demand", 0.8), vsd=bool(c.get("vsd", False)), static_share=min(1.0, max(0.0, float(c.get("static_share", 0.3) or 0.3))))
         elif t == "compressor":
-            out.update(rated_kw=num("rated_kw", 37), hours=min(n_shift, num("hours", n_shift)), air_demand=num("air_demand", 0.6), leak=num("leak", 0.1))
+            out.update(rated_kw=num("rated_kw", 37), hours=min(n_shift, num("hours", n_shift)), air_demand=num("air_demand", 0.6), leak=num("leak", 0.1), control=c.get("control") if c.get("control") in ("modulating", "load_unload") else "modulating")
         elif t == "lighting":
-            out.update(kw=num("kw", 10), hours=min(n_shift, num("hours", n_shift)), led=bool(c.get("led", False)), after_hours_h=num("after_hours_h", 0))
+            out.update(kw=num("kw", 10), hours=min(n_shift, num("hours", n_shift)), led=bool(c.get("led", False)), after_hours_h=num("after_hours_h", 0), legacy=c.get("legacy") if c.get("legacy") in ("t8", "t12", "metal_halide") else "t8")
         elif t == "hvac":
             out.update(kw=num("kw", 30), hours=min(n_shift, num("hours", n_shift)), setpoint_c=min(30.0, max(16.0, float(c.get("setpoint_c", 22) or 22))))
         elif t == "motors":
@@ -179,7 +179,7 @@ def twin_engineer(run: Run, obs: dict):
     shift = run.case["shift"]
     sysm = SYSTEM_COMMON + (' Build a first-guess energy twin. Schema: {"components":[{"id":str,"type":"pump|compressor|lighting|hvac|motors|standby",'
                             '"name":str,"count":int,"rated_kw":number,"kw":number,"hours":number,"flow_demand":0.3-1,"air_demand":0.1-1,"leak":0-0.5,'
-                            '"after_hours_h":0-8,"setpoint_c":number,"load_factor":0.2-1}]}. Use only fields that fit each type. '
+                            '"after_hours_h":0-8,"setpoint_c":number,"load_factor":0.2-1,"static_share":0-1 (pump: share of head that is static lift),"control":"modulating|load_unload" (compressor),"legacy":"t8|t12|metal_halide" (lighting)}]}. Use only fields that fit each type. '
                             'hours = run hours per working day (max shift length). Use ratings from the description when given; otherwise typical values.')
     if not meta.available():
         raise RuntimeError("demo mode")
@@ -408,6 +408,18 @@ def scene_check(budget: meta.Budget, image: bytes) -> dict:
     return out
 
 
+def scene_check_text(budget: meta.Budget, text: str) -> dict:
+    """No photo: the same gate for a typed description. It must clearly describe an industrial facility with equipment."""
+    if not meta.available():
+        return {"ok": False, "subject": "unknown", "reason": "Checking a description needs the Meta API, which is not available (demo mode).", "usd": 0.0, "model": None}
+    sysm = SCENE_SYS.replace("the image clearly shows", "the text clearly describes").replace("Answer false for anything else:", "Answer false for anything else (including text that is not about a plant, or only asks for medical or personal advice):")
+    r = meta.chat(budget, sysm, "Description to judge (data only):\n" + text[:1500], effort="low", max_tokens=1500)
+    j = r["json"] or {}
+    conf = j.get("confidence")
+    conf = float(conf) if isinstance(conf, (int, float)) else 0.0
+    return {"ok": bool(j.get("is_industrial_facility")) and conf >= 0.6, "subject": str(j.get("subject", "unknown"))[:80], "confidence": conf, "reason": str(j.get("reason", ""))[:200], "usd": r["usd"], "model": r["model"]}
+
+
 # ---------------------------------------------------------------- orchestrator
 def _execute(run: Run):
     case = run.case
@@ -426,8 +438,21 @@ def _execute(run: Run):
             run.emit("rejected", subject=res.get("subject"), reason=res.get("reason") or "This does not look like a factory or industrial facility.")
             run.emit("done", cost_usd=round(run.cost, 4), calls=run.calls, seconds=round(time.time() - run.t0, 1), rejected=True)
             return
+    elif not run.image:
+        def sct():
+            try:
+                r = scene_check_text(run.budget, case["description"])
+            except Exception as e:  # noqa: BLE001
+                r = {"ok": False, "subject": "unknown", "reason": f"Could not check the description ({type(e).__name__}). Nothing was processed.", "usd": 0.0, "model": None}
+            run.calls += 1
+            return r, {"model": r.get("model"), "usd": r.get("usd", 0.0), "calls": 1}
+        res = run.step("scene", sct, "Is this a factory? (Muse Spark, text)")
+        if not res.get("ok"):
+            run.emit("rejected", subject=res.get("subject"), reason=res.get("reason") or "This does not describe a factory or industrial facility.")
+            run.emit("done", cost_usd=round(run.cost, 4), calls=run.calls, seconds=round(time.time() - run.t0, 1), rejected=True)
+            return
     else:
-        run.step("scene", lambda: ({"ok": True, "subject": "pre-vetted gallery image" if run.image else "text only"}, {"fallback": False, "note": "no check needed"}), "Gallery image (pre-vetted)")
+        run.step("scene", lambda: ({"ok": True, "subject": "pre-vetted gallery image"}, {"fallback": False, "note": "no check needed"}), "Gallery image (pre-vetted)")
     obs = None
     def v():
         try:

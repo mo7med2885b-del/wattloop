@@ -14,8 +14,11 @@ PARAMS = {
     "tariff_egp_per_kwh": 2.05,       # high-voltage industry, Arab Finance report (docs/research/egypt-energy.md); user-editable
     "grid_kgco2_per_kwh": 0.55,       # UNFCCC IFI grid factor for Egypt, Jul 2019 (docs/research/egypt-energy.md)
     "pv_kwh_per_kwp_day": 5.0,        # PVGIS Cairo 1,827 kWh/kWp/yr (docs/research/egypt-energy.md)
-    "led_factor": 0.5,                # LED draws about half of the old lamp power (ASSUMPTION)
-    "hvac_pct_per_c": 0.06,           # HVAC power change per degree of setpoint (ASSUMPTION)
+    "led_scale": 1.0,                 # multiplies the LED power ratios below (sensitivity only)
+    "hvac_pct_per_c": 0.06,           # 6% per degC: Roussac et al. 2011, 33 offices (conservative end; other studies 8-16%)
+    "leak_slope": 1.0,                # power saved is about proportional to leak flow removed (DTE case study, n=1, weak)
+    "static_share_default": 0.3,      # share of pump head that does not fall with speed; a plant input, 0.3 is a placeholder
+    "static_shift": 0.0,              # sensitivity only
     "capex_vsd_egp_per_kw": 4500.0,   # ASSUMPTION
     "capex_leak_egp": 15000.0,        # ASSUMPTION per audit and repair
     "capex_led_egp_per_kw": 6000.0,   # ASSUMPTION
@@ -24,7 +27,13 @@ PARAMS = {
     "capex_pv_egp_per_kwp": 18000.0,  # ASSUMPTION
     "capex_hvac_egp": 0.0,
 }
-SENSITIVITY = {"low": 0.8, "base": 1.0, "high": 1.2}  # scales waste-related savings assumptions
+# LED power as a share of the old lamp, by baseline: PNNL-20404 (2011) T8 median of 0.649/0.597/0.772, T12 0.49; metal halide from rated watts only (PARTIAL)
+LED_BY_LEGACY = {"t8": 0.65, "t12": 0.49, "metal_halide": 0.32}
+COMPRESSOR_CURVES = {"modulating": (0.70, 0.30), "load_unload": (0.25, 0.75)}  # power share at zero / extra at full load (CAC fact sheet 6; Fluid Power World 2018)
+# sensitivity sets: low / base / high savings. HVAC band 4.5% / 6% / 10% per degC; LED +-; pump static share +-0.2; leak slope 0.75 / 1 / 1
+SENSITIVITY = {"low": {"hvac_pct_per_c": 0.045, "led_scale": 1.15, "static_shift": 0.2, "leak_slope": 0.75},
+               "base": {},
+               "high": {"hvac_pct_per_c": 0.10, "led_scale": 0.9, "static_shift": -0.2, "leak_slope": 1.0}}
 
 
 def hours_in_window(spec: dict) -> list[int]:
@@ -50,13 +59,19 @@ def component_power_kw(c: dict, params: dict) -> float:
     t = c["type"]
     if t == "pump":
         f = c["flow_demand"]
-        frac = (f ** 3) / 0.95 + 0.02 if c.get("vsd") else 0.55 + 0.45 * f
+        if c.get("vsd"):   # power = flow x head; the static part of the head does not fall with speed (Rockwell/Flowserve test, Plant Services 2005)
+            s = min(1.0, max(0.0, c.get("static_share", params["static_share_default"]) + params["static_shift"]))
+            frac = f * (s + (1 - s) * f * f)
+        else:
+            frac = 0.516 + 0.484 * f   # linear fit to the same test; throttled constant speed
         return c["count"] * c["rated_kw"] * frac
     if t == "compressor":
-        load = min(1.0, c["air_demand"] + c["leak"])
-        return c["rated_kw"] * (0.25 + 0.75 * load)
+        c0, c1 = COMPRESSOR_CURVES.get(c.get("control", "modulating"), COMPRESSOR_CURVES["modulating"])
+        base = c0 + c1 * min(1.0, c["air_demand"])
+        return min(c["rated_kw"], c["rated_kw"] * (base + params["leak_slope"] * c["leak"]))
     if t == "lighting":
-        return c["kw"] * (params["led_factor"] if c.get("led") else 1.0)
+        ratio = LED_BY_LEGACY.get(c.get("legacy", "t8"), 0.65) * params["led_scale"]
+        return c["kw"] * (ratio if c.get("led") else 1.0)
     if t == "hvac":
         return max(0.0, c["kw"] * (1 - params["hvac_pct_per_c"] * (c["setpoint_c"] - 22.0)))
     if t == "motors":
@@ -265,10 +280,9 @@ def _parts(spec: dict, params: dict | None) -> dict:
 
 
 def sensitivity(spec: dict, fixes: list[dict]) -> dict:
-    """Re-run the plan with waste-related assumptions scaled low/base/high."""
+    """Re-run the plan with the evidence-based low / base / high assumption sets."""
     out = {}
-    for name, k in SENSITIVITY.items():
-        prm = {"led_factor": 1 - (1 - PARAMS["led_factor"]) * k, "hvac_pct_per_c": PARAMS["hvac_pct_per_c"] * k}
+    for name, prm in SENSITIVITY.items():
         r = evaluate(spec, fixes, prm)
         out[name] = {"saved_egp_year": r["saved_egp_year"], "saved_kwh_month": r["saved_kwh_month"]}
     return out

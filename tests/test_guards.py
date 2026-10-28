@@ -9,8 +9,8 @@ from wattloop import demo, meta, pipeline
 
 def make_run():
     c = demo.case()
-    c.update(shift={"start": 6, "end": 22, "days_per_week": 6}, name="t")
-    return pipeline.Run(c, None)
+    c.update(shift={"start": 6, "end": 22, "days_per_week": 6}, name="t", trusted_image=True)
+    return pipeline.Run(c, b"fake-image")
 
 
 def fake_chat_factory(counter, delay=0.0):

@@ -220,12 +220,19 @@ const App = (() => {
     try { const r = await fetch(`/api/run/${runId}/cancel`, { method: "POST" }); await r.json(); await poll(); } catch (e) { /* the server drops later events anyway */ }
     WF.apply({ type: "cancelled" }); handle({ type: "cancelled" });
   }
+  const NOPHOTO = "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 150"><rect width="300" height="150" fill="#1a1c20"/><text x="150" y="72" fill="#9aa0a6" font-family="sans-serif" font-size="14" text-anchor="middle">No photo: the twin will be</text><text x="150" y="92" fill="#ff6a00" font-family="sans-serif" font-size="14" text-anchor="middle">built from your description</text></svg>');
+  function describeMode() {
+    source = { type: "text" }; upload = null; imgOk = true; setPhoto(NOPHOTO); $("#desc").value = ""; $("#bill").value = ""; $("#desc").focus();
+    imgStatus("ok", "Describe the machines below (types, kW, how they run, problems you see). A model checks that it is a factory, then builds the twin from your words.");
+    caption("Describe your plant", "Write the machines and how they run; then add the monthly bill and build.");
+  }
   async function start() {
     if (running) { cancel(); return; }
     const bill = +$("#bill").value; if (!(bill > 0)) { imgStatus("bad", "Enter the monthly electricity bill in kWh."); return; }
     if (source.type === "upload" && !imgOk) { imgStatus("bad", "This image was not accepted. Choose a factory photo."); return; }
     setRunning(true); since = 0; autoCompare = true; setMode("now"); resetForBuild();
-    const body = source.type === "gallery" ? { gallery_id: source.id, description: $("#desc").value, bill_kwh: bill } : { image_b64: upload, description: $("#desc").value, bill_kwh: bill };
+    if (source.type === "text" && $("#desc").value.trim().length < 15) { imgStatus("bad", "Describe the machines in a sentence or two first."); return; }
+    const body = source.type === "text" ? { description: $("#desc").value, bill_kwh: bill } : source.type === "gallery" ? { gallery_id: source.id, description: $("#desc").value, bill_kwh: bill } : { image_b64: upload, description: $("#desc").value, bill_kwh: bill };
     const r = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (!r.ok) { setRunning(false); let m = "Could not start."; try { m = (await r.json()).detail || m; } catch (e) { /* ignore */ } imgStatus("bad", m); return; }
     runId = (await r.json()).run_id; clearInterval(timer); timer = setInterval(poll, 500); poll();
@@ -238,7 +245,7 @@ const App = (() => {
     try { localStorage.setItem("wl-side-" + side, closed ? "1" : "0"); } catch (e) { /* ignore */ }
   }
   function notify(side) { if (collapsed[side]) $(side === "l" ? "#toggleL" : "#toggleR").classList.add("alert"); }
-  function setMode(m) { Factory.setMode(m); document.querySelectorAll("#scenes button").forEach((b) => b.classList.toggle("on", b.dataset.m === m)); refreshAll(); }
+  function setMode(m) { Factory.setMode(m); $("#stage").classList.toggle("cmp", m === "compare"); document.querySelectorAll("#scenes button").forEach((b) => b.classList.toggle("on", b.dataset.m === m)); refreshAll(); }
 
   function applyTheme(t) { document.documentElement.dataset.theme = t; Factory.setTheme(t === "light"); try { localStorage.setItem("wl-theme", t); } catch (e) { /* private mode: no persistence */ } }
   const toggleTheme = () => applyTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light");
@@ -252,6 +259,16 @@ const App = (() => {
     const end = () => { drag = null; g.classList.remove("drag"); }; g.addEventListener("pointerup", end); g.addEventListener("pointercancel", end);
     g.addEventListener("dblclick", () => set(H < 24 ? 184 : 0));
   }
+  async function openEvidence() {
+    $("#ev").hidden = false; const box = $("#evBody"); if (box.dataset.ready) return; box.textContent = "Loading…";
+    const d = await (await fetch("/api/evidence")).json(), L = d.legacy, C = d.current, comps = Object.keys(L.by_component);
+    box.innerHTML = `<div class="evh"><div><b>${L.median_abs_err_pct}%</b><span>median error vs published data (before fitting)</span></div><div><b>${L.mean_abs_err_pct}%</b><span>mean error</span></div><div><b>${L.n}</b><span>comparisons from ${d.independent_sources} independent sources</span></div><div><b>${L.worst_abs_err_pct}%</b><span>worst case (HVAC savings, understated)</span></div></div>
+      <p class="small muted">This checks the component formulas against published measurements. It is not a field validation of any plant. After fitting constants on the same points the in-sample median is ${C.median_abs_err_pct}%: do not quote that as accuracy.</p>
+      <table class="evt"><tr><th>Component</th><th>n</th><th>Median error (first version)</th><th>In-sample after fitting</th></tr>${comps.map((k) => `<tr><td>${k}</td><td>${L.by_component[k].n}</td><td>${L.by_component[k].median_abs_err_pct}%</td><td>${(C.by_component[k] || {}).median_abs_err_pct}%</td></tr>`).join("")}</table>
+      <h3 class="small" style="margin:8px 0 2px">Where each number comes from</h3><table class="evt"><tr><th>Item</th><th>Value</th><th>Basis</th><th>Status</th></tr>${d.provenance.map((p) => `<tr><td>${p.item}</td><td>${p.value}</td><td>${p.basis}</td><td class="st-${p.status.split(" ")[0]}">${p.status}</td></tr>`).join("")}</table>
+      <h3 class="small" style="margin:8px 0 2px">Limits we state openly</h3><ul class="evl">${d.limits.map((x) => `<li>${x}</li>`).join("")}</ul>`;
+    box.dataset.ready = "1";
+  }
   async function init() {
     initGrip(); Factory.init($("#iso"), $("#callouts"), $("#leaders"));
     let t0 = "dark"; try { t0 = localStorage.getItem("wl-theme") || "dark"; } catch (e) { /* ignore */ } applyTheme(t0);
@@ -259,10 +276,11 @@ const App = (() => {
     document.querySelectorAll("#scenes button").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.m)));
     $("#toggleL").addEventListener("click", () => setSide("l", !collapsed.l)); $("#toggleR").addEventListener("click", () => setSide("r", !collapsed.r));
     try { if (localStorage.getItem("wl-side-l") === "1") setSide("l", true); if (localStorage.getItem("wl-side-r") === "1") setSide("r", true); } catch (e) { /* ignore */ }
+    $("#evBtn").addEventListener("click", openEvidence); $("#evClose").addEventListener("click", () => { $("#ev").hidden = true; }); $("#ev").addEventListener("click", (e) => { if (e.target.id === "ev") $("#ev").hidden = true; });
     $("#run").addEventListener("click", start); $("#wfOpen").addEventListener("click", () => WF.open()); $("#demoBtn").addEventListener("click", demo); $("#overview").addEventListener("click", () => Factory.focus(null));
     $("#pick").addEventListener("click", (e) => { e.stopPropagation(); $("#pickMenu").hidden = !$("#pickMenu").hidden; });
     document.addEventListener("click", () => { $("#pickMenu").hidden = true; });
-    $("#pickMenu").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { $("#pickMenu").hidden = true; if (b.dataset.p === "gallery") openGallery(); else $("#file").click(); }));
+    $("#pickMenu").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { $("#pickMenu").hidden = true; if (b.dataset.p === "gallery") openGallery(); else if (b.dataset.p === "describe") describeMode(); else $("#file").click(); }));
     $("#file").addEventListener("change", (e) => { onFile(e.target.files[0]); e.target.value = ""; });
     $("#galClose").addEventListener("click", () => { $("#gal").hidden = true; }); $("#gal").addEventListener("click", (e) => { if (e.target.id === "gal") $("#gal").hidden = true; });
     document.querySelectorAll(".btns button").forEach((b) => b.addEventListener("click", async () => { if (!runId && !S.result) return; if (runId) await fetch(`/api/run/${runId}/decision`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: b.dataset.a }) }); $("#decided").textContent = "Engineer decision recorded: " + b.dataset.a; alog("Engineer: " + b.dataset.a, b.dataset.a === "approve" ? "ok" : ""); }));
