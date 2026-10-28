@@ -14,6 +14,24 @@ const App = (() => {
   const caption = (t, s) => { $("#capT").textContent = t; $("#capS").textContent = s; if (window.gsap && !reduce) gsap.fromTo("#caption", { opacity: .2, x: -12 }, { opacity: 1, x: 0, duration: .4 }); };
   const alog = (text, cls = "") => { const l = $("#alog"); if (l.firstChild && l.firstChild.textContent === "No events yet.") l.innerHTML = ""; const d = document.createElement("div"); d.className = "a " + cls; d.textContent = text; l.append(d); l.scrollTop = l.scrollHeight; };
 
+  // ---------------------------------------------------------------- live twin build panel
+  const ICON = { pump: "◎", compressor: "▤", lighting: "☼", hvac: "❄", motors: "⚙", standby: "⏻", pv: "▦" };
+  const brief = (c) => ({ pump: `${c.count}× ${c.rated_kw.toFixed(0)} kW · flow ${Math.round(c.flow_demand * 100)}% · ${c.vsd ? "VSD" : "valve"}`, compressor: `${c.rated_kw.toFixed(0)} kW · leak ${Math.round(c.leak * 100)}% · demand ${Math.round(c.air_demand * 100)}%`,
+    lighting: `${c.kw.toFixed(0)} kW · ${c.led ? "LED" : "fluorescent"} · after-hrs ${c.controls ? "controlled" : c.after_hours_h || 0}`, hvac: `${c.kw.toFixed(0)} kW · ${c.setpoint_c.toFixed(0)} °C · ${c.hours} h`, motors: `${c.kw.toFixed(0)} kW · load ${Math.round(c.load_factor * 100)}%`, standby: `${c.auto_off ? "auto off" : c.kw.toFixed(1) + " kW"}`, pv: `${c.kwp.toFixed(0)} kWp` }[c.type] || c.type);
+  const buildPrev = {};
+  function renderBuild(spec, stage, reset) {
+    const box = $("#build"); if (reset) { box.innerHTML = ""; for (const k in buildPrev) delete buildPrev[k]; } $("#buildStage").textContent = stage;
+    if (!spec) return; if (box.firstElementChild && box.firstElementChild.classList.contains("muted")) box.innerHTML = "";
+    spec.components.forEach((c) => {
+      const now = brief(c); let row = box.querySelector(`[data-id="${c.id}"]`);
+      if (!row) { row = document.createElement("div"); row.className = "brow"; row.dataset.id = c.id; row.innerHTML = `<div class="bi">${ICON[c.type] || "•"}</div><div><b>${c.name || c.id}</b><span class="d"></span></div><i class="pg"></i>`; box.append(row);
+        if (window.gsap && !reduce) { gsap.from(row, { x: -18, opacity: 0, duration: .45 }); gsap.fromTo(row.querySelector(".pg"), { scaleX: 0, transformOrigin: "0 50%" }, { scaleX: 1, duration: .7, onComplete() { row.querySelector(".pg").style.opacity = 0; } }); } }
+      const d = row.querySelector(".d"), was = buildPrev[c.id];
+      if (was && was !== now) { d.innerHTML = `<del>${was}</del><span class="chg">${now}</span>`; if (window.gsap && !reduce) gsap.fromTo(row, { backgroundColor: "rgba(255,106,0,.28)" }, { backgroundColor: "rgba(0,0,0,0)", duration: 1.2, clearProps: "backgroundColor" }); }
+      else d.textContent = now; buildPrev[c.id] = now; row.classList.toggle("ok", stage.startsWith("after"));
+    });
+  }
+
   // ---------------------------------------------------------------- charts and widgets
   function drawCal() {
     const svg = $("#calchart"); svg.innerHTML = ""; const w = 280, h = 110, pl = 34, pb = 16, pt = 6, pr = 6; if (!calib.twin.length) return;
@@ -114,14 +132,15 @@ const App = (() => {
       case "run_start": cost = 0; calls = 0; rej = 0; calib.twin = []; S.result = null; $("#calchart").innerHTML = ""; $("#fixes tbody").innerHTML = ""; $("#alog").innerHTML = ""; $("#decided").textContent = ""; $("#summary").textContent = "Running…"; $("#critic").textContent = ""; radar(null); alog("Run started"); caption("Reading your facility", "Photo, description and bill received."); break;
       case "node_start": { const m = { scene: ["Checking the image", "Is it clearly a factory? Muse Spark vision looks first."], vision: ["Reading the equipment", "Muse Spark vision lists machines and waste signs."], segment: ["Locating equipment", "SAM 3.1 outlines each machine in the photo."], engineer: ["Building the twin", "Muse Spark writes a first-guess model as structured data."], calibrate: ["Calibrating to your bill", "Adjusting the uncertain parameters until the twin matches the bill."], hunt: ["Testing fixes in the twin", "Aggressive proposals first; code rejects what is impractical."], critic: ["Trying to refute the savings", "The Critic attacks the claim; code adds a sensitivity range."], report: ["Writing the engineer brief", "Only verified numbers are allowed in the text."] }[ev.node]; if (m) caption(...m); break; }
       case "node_done":
+        if (ev.node === "engineer" && ev.output && ev.output.spec) renderBuild(ev.output.spec, "engineer draft", true);
         calls += ev.calls || 0; cost += ev.usd || 0;
         if (ev.node === "segment" && ev.output && ev.output.boxes) overlay(ev.output.boxes);
         if (ev.node === "scene") alog(ev.output && ev.output.ok ? "Scene check: " + (ev.output.subject || "factory") : "Scene check refused the image", ev.output && ev.output.ok ? "ok" : "bad"); break;
-      case "loop": calib.bill = ev.bill_kwh; calib.twin.push(ev.twin_kwh); drawCal(); calSpec = ev.spec; S.hourA = ev.hourly; S.hourB = ev.hourly; S.partsA = ev.parts; S.partsB = ev.parts;
+      case "loop": renderBuild(ev.spec, "calibration " + ev.iter); calib.bill = ev.bill_kwh; calib.twin.push(ev.twin_kwh); drawCal(); calSpec = ev.spec; S.hourA = ev.hourly; S.hourB = ev.hourly; S.partsA = ev.parts; S.partsB = ev.parts;
         Factory.setSpecs(ev.spec, ev.spec, ev.parts, ev.parts, ev.hourly, ev.hourly); refreshAll(); $("#calnote").textContent = `Iteration ${ev.iter}: twin ${fmt(ev.twin_kwh)} vs bill ${fmt(ev.bill_kwh)} kWh (${ev.err_pct > 0 ? "+" : ""}${ev.err_pct}%)` + (Math.abs(ev.err_pct) <= 5 ? " · calibrated" : " · adjusting…");
         caption("Calibrating to your bill", `Twin ${fmt(ev.twin_kwh)} vs bill ${fmt(ev.bill_kwh)} kWh (${ev.err_pct > 0 ? "+" : ""}${ev.err_pct}%)`); alog(`Calibration ${ev.iter}: ${ev.err_pct > 0 ? "+" : ""}${ev.err_pct}%`, Math.abs(ev.err_pct) <= 5 ? "ok" : ""); radar(Math.max(0, Math.round(100 - Math.abs(ev.err_pct) * 3))); break;
       case "note": alog(ev.text); break;
-      case "fix_round": fixRows(ev.round, ev.results); S.hourA = ev.hourly_before; S.hourB = ev.hourly_after; S.partsA = ev.parts_before; S.partsB = ev.parts_after; if (calSpec) Factory.setSpecs(calSpec, ev.spec_after, ev.parts_before, ev.parts_after, ev.hourly_before, ev.hourly_after); refreshAll(); break;
+      case "fix_round": renderBuild(ev.spec_after, "after fixes · round " + ev.round); fixRows(ev.round, ev.results); S.hourA = ev.hourly_before; S.hourB = ev.hourly_after; S.partsA = ev.parts_before; S.partsB = ev.parts_after; if (calSpec) Factory.setSpecs(calSpec, ev.spec_after, ev.parts_before, ev.parts_after, ev.hourly_before, ev.hourly_after); refreshAll(); break;
       case "gate": showResult(ev.result); Factory.setSpecs(calSpec, ev.result.spec_after, S.partsA, S.partsB, S.hourA, S.hourB); refreshAll(); caption("Verified in the twin", "Simulated estimates. An engineer must review before any action."); alog(`Plan verified: ${fmt(ev.result.evaluation.saved_egp_year)} EGP/yr (simulated)`, "ok"); if (autoCompare) { autoCompare = false; setMode("compare"); } break;
       case "decision": $("#decided").textContent = "Engineer decision recorded: " + ev.action; alog("Engineer: " + ev.action, ev.action === "approve" ? "ok" : ""); break;
       case "rejected": caption("Image refused", ev.reason); imgStatus("bad", "Not processed: " + ev.reason); alog("Image refused: " + ev.reason, "bad"); $("#summary").textContent = "No analysis: the image is not a factory."; break;
@@ -144,7 +163,7 @@ const App = (() => {
   async function demo() {
     clearInterval(timer); const d = await (await fetch("/api/demo/instant")).json();
     source = { type: "gallery", id: "demo" }; imgOk = true; setPhoto("/api/demo/image"); $("#desc").value = d.description; $("#bill").value = d.bill_kwh; $("#overlay").innerHTML = "";
-    calSpec = d.spec; calib.twin = d.calibration; calib.bill = d.bill_kwh; drawCal(); $("#calnote").textContent = "Pre-computed demo: the twin already matches the bill."; $("#fixes tbody").innerHTML = ""; rej = 0;
+    renderBuild(d.spec, "pre-computed", true); renderBuild(d.result.spec_after, "after fixes · demo"); calSpec = d.spec; calib.twin = d.calibration; calib.bill = d.bill_kwh; drawCal(); $("#calnote").textContent = "Pre-computed demo: the twin already matches the bill."; $("#fixes tbody").innerHTML = ""; rej = 0;
     d.rounds.forEach((r, i) => fixRows(i + 1, r)); $("#alog").innerHTML = ""; alog("DEMO: pre-computed model, no AI call", "ok"); alog("Round 1 rejected 2 over-aggressive fixes", "bad"); alog("Round 2 verified the corrected plan", "ok");
     showResult(d.result); S.hourA = d.result.evaluation.hourly_before; S.hourB = d.result.evaluation.hourly_after; S.partsA = d.result.evaluation.parts_before; S.partsB = d.result.evaluation.parts_after;
     Factory.setSpecs(d.spec, d.result.spec_after, S.partsA, S.partsB, S.hourA, S.hourB); Factory.focus(null); setMode("compare"); refreshAll(); $("#stat").textContent = "DEMO · 0 model calls · $0.0000";
