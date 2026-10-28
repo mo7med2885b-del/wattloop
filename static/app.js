@@ -242,8 +242,18 @@ const App = (() => {
 
   function applyTheme(t) { document.documentElement.dataset.theme = t; Factory.setTheme(t === "light"); try { localStorage.setItem("wl-theme", t); } catch (e) { /* private mode: no persistence */ } }
   const toggleTheme = () => applyTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light");
+  function initGrip() {
+    const app = document.querySelector(".app"), g = $("#grip"), KEY = "wl-strip"; let H = 184, drag = null;
+    try { const v = +localStorage.getItem(KEY); if (v >= 0) H = v; } catch (e) { /* ignore */ }
+    const set = (h) => { H = Math.max(0, Math.min(Math.round(innerHeight * .6), h)); app.style.setProperty("--sh", H + "px"); app.classList.toggle("stripOff", H < 24); try { localStorage.setItem(KEY, String(H)); } catch (e) { /* ignore */ } };
+    set(H);
+    g.addEventListener("pointerdown", (e) => { drag = { y: e.clientY, h: H }; g.setPointerCapture(e.pointerId); g.classList.add("drag"); });
+    g.addEventListener("pointermove", (e) => { if (drag) set(drag.h - (e.clientY - drag.y)); });
+    const end = () => { drag = null; g.classList.remove("drag"); }; g.addEventListener("pointerup", end); g.addEventListener("pointercancel", end);
+    g.addEventListener("dblclick", () => set(H < 24 ? 184 : 0));
+  }
   async function init() {
-    Factory.init($("#iso"), $("#callouts"), $("#leaders"));
+    initGrip(); Factory.init($("#iso"), $("#callouts"), $("#leaders"));
     let t0 = "dark"; try { t0 = localStorage.getItem("wl-theme") || "dark"; } catch (e) { /* ignore */ } applyTheme(t0);
     $("#themeBtn").addEventListener("click", toggleTheme); $("#wfTheme").addEventListener("click", toggleTheme); buildTimeline(); radar(null);
     document.querySelectorAll("#scenes button").forEach((b) => b.addEventListener("click", () => setMode(b.dataset.m)));
