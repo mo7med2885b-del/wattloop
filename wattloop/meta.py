@@ -27,7 +27,9 @@ def env(key: str, default: str = "") -> str:
     return default
 
 
-PRICE_IN, PRICE_OUT = 0.15, 0.50  # USD per million tokens (Muse Spark 1.3 rate seen in v1; verify on the Meta dashboard)
+PRICES = {"muse-spark-1.3": (1.25, 4.25), "muse-spark-1.2": (1.25, 4.25), "muse-spark-1.1": (1.25, 4.25), "muse-wonder-1.0": (4.00, 20.00),
+          "muse-spark-1.3-contributor": (0.10, 0.20), "muse-spark-1.2-contributor": (0.10, 0.20)}  # official price list, 2026-10-28; contributor = inputs used to train Meta models  # USD per 1M tokens in/out (docs/research/meta-models.md)
+PRICE_IN, PRICE_OUT = PRICES["muse-spark-1.3"]
 SAM_USD = 0.0025  # $2.50 per 1,000 images (docs/research/meta-models.md)
 
 
@@ -112,10 +114,10 @@ def parse_json(text: str) -> dict | None:
 
 
 def chat(budget: Budget, system: str, user: str, *, image: bytes | None = None, effort: str = "low",
-         max_tokens: int = 4000, timeout: int = 120) -> dict:
+         max_tokens: int = 4000, timeout: int = 120, model: str | None = None) -> dict:
     """One Muse Spark call. Returns {text, json, model, ms, usd, tokens_in, tokens_out}. Raises on failure."""
     budget.check()
-    model = env("META_MODEL", "muse-spark-1.3")
+    model = model or env("META_MODEL", "muse-spark-1.3")
     content: list | str = user
     if image:
         content = [{"type": "text", "text": user},
@@ -129,7 +131,8 @@ def chat(budget: Budget, system: str, user: str, *, image: bytes | None = None, 
     j = r.json()
     text = (j["choices"][0]["message"].get("content") or "").strip()
     u = j.get("usage", {})
-    usd = u.get("prompt_tokens", 0) * PRICE_IN / 1e6 + u.get("completion_tokens", 0) * PRICE_OUT / 1e6
+    pin, pout = PRICES.get(model, PRICES["muse-spark-1.3"])
+    usd = u.get("prompt_tokens", 0) * pin / 1e6 + u.get("completion_tokens", 0) * pout / 1e6
     budget.record(usd)
     return {"text": text, "json": parse_json(text), "model": model, "ms": int((time.time() - t0) * 1000), "usd": usd,
             "tokens_in": u.get("prompt_tokens", 0), "tokens_out": u.get("completion_tokens", 0)}

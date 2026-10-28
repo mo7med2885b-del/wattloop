@@ -425,7 +425,8 @@ def scene_designer(run: Run, spec: dict, obs: dict, boxes: list[dict]):
     fb = designer.layout_from_boxes(spec, boxes)
     if meta.available():
         try:
-            r = meta.chat(run.budget, designer.SYSTEM, designer.user_prompt(spec, run.case["description"], obs, boxes), effort="medium", max_tokens=7000)
+            r = meta.chat(run.budget, designer.SYSTEM, designer.user_prompt(spec, run.case["description"], obs, boxes), image=run.image, effort="medium", max_tokens=8000,
+                          model=meta.env("DESIGN_MODEL", "muse-spark-1.3"))
             run.calls += 1
             if r["json"]:
                 design = designer.validate_design(r["json"], spec, fb)
