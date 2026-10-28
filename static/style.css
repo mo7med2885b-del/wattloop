@@ -170,3 +170,5 @@ button.primary.danger{background:var(--bad);color:#fff}
 .evt{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0 12px}.evt th,.evt td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left}.evt th{background:var(--hd);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}
 .evh{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 10px}.evh div{background:var(--field);border:1px solid var(--line);padding:8px 10px}.evh b{display:block;font-size:22px;color:var(--or)}.evh span{font-size:11px;color:var(--mut)}
 .st-VERIFIED{color:var(--ok)}.st-PARTIAL{color:var(--warn)}.st-UNVERIFIED{color:var(--bad)}.evl{margin:6px 0;padding-left:18px;color:var(--mut);font-size:12px}
+
+.pdfbtn{width:100%;margin:6px 0 4px;background:var(--or);color:var(--btn-ink);border:0;padding:9px;font-weight:800;letter-spacing:.03em;font-size:12px}.pdfbtn:disabled{opacity:.4;cursor:default}.pdfbtn:not(:disabled):hover{filter:brightness(1.1)}

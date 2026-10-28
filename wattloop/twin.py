@@ -286,3 +286,15 @@ def sensitivity(spec: dict, fixes: list[dict]) -> dict:
         r = evaluate(spec, fixes, prm)
         out[name] = {"saved_egp_year": r["saved_egp_year"], "saved_kwh_month": r["saved_kwh_month"]}
     return out
+
+
+def plan_detail(spec: dict, plan: list[dict]) -> list[dict]:
+    """Each fix evaluated on its own (savings overlap when fixes are combined, so the total is lower than the sum)."""
+    out = []
+    for f in plan:
+        try:
+            r = evaluate(spec, [f])
+            out.append({"fix": f, "saved_kwh_month": r["saved_kwh_month"], "saved_egp_year": r["saved_egp_year"], "capex_egp": r["capex_egp"], "payback_months": r["payback_months"]})
+        except FixError:
+            continue
+    return out

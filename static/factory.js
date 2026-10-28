@@ -186,14 +186,14 @@ window.Factory = (function () {
       if (hidden) { d.style.opacity = 0; d.style.pointerEvents = "none"; ln.setAttribute("opacity", 0); return; }
       tmp.copy(a).project(cam); items.push({ o, x: (tmp.x * .5 + .5) * rect.w, y: (-tmp.y * .5 + .5) * rect.h });
     });
-    const rows = [];   // right edge used so far on each rail row
+    const rowH = Math.max(60, ...items.map((i) => i.o.d.offsetHeight || 60)) + 6, rows = [];   // common row height; right edge used so far on each rail row
     items.sort((p, q) => p.x - q.x).forEach((it) => {
       const { d, ln, c } = it.o, hgt = d.offsetHeight || 60, half = 71;
       let cx = Math.max(half + 6, Math.min(rect.w - half - 6, it.x)), top, r = 0;
       if (S.focus) { top = Math.max(hgt + 10, it.y - 70); cx = Math.max(half + 6, Math.min(rect.w - half - 6, it.x)); }
       else {
         while (r < 4 && cx - half < (rows[r] ?? -1e9) + 8) r++;
-        rows[r] = cx + half; top = 14 + (r + 1) * hgt + r * 8;
+        rows[r] = cx + half; top = 12 + (r + 1) * rowH;
       }
       d.style.opacity = 1; d.style.pointerEvents = "auto"; d.style.left = cx + "px"; d.style.top = top + "px";
       const col = d.classList.contains("fixed") ? "#35e08a" : "#ff6a00"; ln.setAttribute("d", `M${cx},${top} L${it.x},${it.y}`); ln.setAttribute("stroke", col); ln.setAttribute("opacity", .85);
@@ -259,6 +259,17 @@ window.Factory = (function () {
     },
     onFrame(f) { onFrame = f; }, onFocus(f) { onFocus = f; }, getSpec() { return S.mode === "after" ? S.specB : S.specA; }, get mode() { return S.mode; }, get focused() { return S.focus; },
     scene() { return (S.mode === "after" ? W.B : W.A); },
+    snapshot(which) {   // renders one scene at 1200x700 and returns a PNG data URL (used by the PDF report)
+      const w = which === "after" ? W.B : W.A; if (!w) return null;
+      const old = renderer.getSize(new T.Vector2()), hour = which === "after" ? 11 : 11;
+      renderer.setSize(1200, 700, false); renderer.setScissorTest(false); renderer.setViewport(0, 0, 1200, 700);
+      const a = cam.aspect, f = cam.fov; cam.aspect = 1200 / 700; cam.fov = 34; cam.updateProjectionMatrix();
+      const ce = Math.cos(.5), saved = cam.position.clone(); cam.position.set(Math.sin(.62) * ce * 44, Math.sin(.5) * 44 + 1.2, Math.cos(.62) * ce * 44); cam.lookAt(0, 1.2, 0);
+      animate(w, hour, 0, which === "after" ? S.partsB : S.partsA); renderer.render(w.sc, cam);
+      const url = canvas.toDataURL("image/jpeg", .82);
+      cam.position.copy(saved); cam.aspect = a; cam.fov = f; cam.updateProjectionMatrix(); renderer.setSize(old.x, old.y, false);
+      return url;
+    },
   };
   return api;
 })();

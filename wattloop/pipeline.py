@@ -481,7 +481,7 @@ def _execute(run: Run):
     arb = arbiter(err, ev, sens, crit, fb)
     rep = run.step("report", lambda: report_writer(run, ev, plan, arb, crit), "Write the engineer brief")
     run.result = {"plan": plan, "evaluation": {k: v for k, v in ev.items() if k != "spec"}, "sensitivity": sens, "critic": crit, "arbiter": arb,
-                  "summary": rep["summary"], "calibration_err_pct": err, "cost_usd": round(run.cost, 4), "model_calls": run.calls, "spec_after": ev["spec"]}
+                  "summary": rep["summary"], "plan_detail": twin.plan_detail(spec, plan), "params": {"tariff_egp_per_kwh": twin.PARAMS["tariff_egp_per_kwh"], "grid_kgco2_per_kwh": twin.PARAMS["grid_kgco2_per_kwh"]}, "calibration_err_pct": err, "cost_usd": round(run.cost, 4), "model_calls": run.calls, "spec_after": ev["spec"]}
     run.emit("gate", state="REQUIRES ENGINEER REVIEW", result=run.result)
     run.emit("done", cost_usd=round(run.cost, 4), calls=run.calls, seconds=round(time.time() - run.t0, 1))
 

@@ -59,6 +59,7 @@
         <div class="pb"><div class="eng"><div class="av"><svg viewBox="0 0 60 60"><circle cx="30" cy="22" r="11" fill="#555"/><path d="M12 52 C12 38 48 38 48 52 Z" fill="#555"/><path d="M17 17 C17 5 43 5 43 17 Z" fill="#ff6a00"/><rect x="14" y="16" width="32" height="4" rx="2" fill="#ff8a30"/></svg></div>
           <div><b>REQUIRES ENGINEER REVIEW</b><div class="muted small" id="summary">Run the twin to get a verified plan.</div></div></div>
           <div id="critic" class="small"></div>
+          <button class="pdfbtn" id="pdfBtn" type="button" disabled>⬇ Download PDF report</button>
           <div class="btns"><button data-a="approve">Approve for site audit</button><button data-a="modify">Modify</button><button data-a="reject">Reject</button></div><div id="decided" class="muted small"></div></div></section>
       <section class="pn stat"><span id="stat">0 model calls · $0.0000</span></section>
     </aside>
@@ -120,7 +121,10 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <script src="/static/factory.js"></script>
+<script src="/static/report.js"></script>
 <script src="/static/icons.js"></script>
 <script src="/static/flow.js"></script>
 <script src="/static/app.js"></script>
