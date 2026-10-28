@@ -48,3 +48,14 @@ def test_fallback_layout_follows_the_sam_boxes():
     assert d["layout"]["air"]["x"] > d["layout"]["pumps"]["x"]
     designer.apply_design(s, d)
     assert "design" in next(c for c in s["components"] if c["id"] == "air")
+
+
+def test_look_and_repeat_are_validated():
+    s = spec()
+    raw = {"layout": [{"id": "belts", "x": 0, "z": -3, "scale": 1, "look": "machine_row"}, {"id": "pumps", "x": -9, "z": 6, "look": "big_machine"}],
+           "extras": [{"role": "machine_block", "shape": "box", "size": [2, 1.4, 1.6], "pos": [-10, .7, 2], "repeat": {"n": 50, "dx": 9, "dz": 0}}] * 10}
+    d = designer.validate_design(raw, s)
+    assert d["layout"]["belts"]["look"] == "machine_row"
+    assert "look" not in d["layout"]["pumps"]                         # only the production line can change its look
+    assert all(1 <= e["repeat"]["n"] <= 12 and abs(e["repeat"]["dx"]) <= 4 for e in d["extras"])
+    assert sum(e["repeat"]["n"] for e in d["extras"]) <= designer.MAX_MESHES

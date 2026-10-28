@@ -103,8 +103,17 @@ window.Factory = (function () {
     }
     const M = byType("motors")[0];
     if (M) {
-      begin(M); const belt = Box(16, .5, 2, 0x16191c, EDGE, .75); belt.position.set(-2, 1, -3.6); tgt.add(belt);
-      for (let i = 0; i < 6; i++) { const b = Box(1.1, .85, 1.1, 0x3a2e1f, OR, .9); b.position.set(-9.5 + i * 2.5, 1.7, -3.6); tgt.add(b); w.boxes.push(b); }
+      begin(M); const look = (M.design && M.design.look) || "conveyor";
+      if (look === "machine_row") {   // looms, presses, lathes: a row of similar machines
+        for (let i = 0; i < 6; i++) { const b = Box(2.1, 1.5, 1.7, BODY, EDGE, .8); b.position.set(-9 + i * 2.7, .75, -3.6); tgt.add(b); const top = Box(1.6, .25, 1.2, 0x3a2e1f, OR, .9); top.position.set(-9 + i * 2.7, 1.62, -3.6); tgt.add(top); w.boxes.push(top); }
+      } else if (look === "big_machine") {   // kiln, dryer drum, tunnel oven: one long body that turns or glows
+        const drum = Cyl(1.3, 13, BODY, EDGE, 28, .8); drum.rotation.z = Math.PI / 2; drum.position.set(-2, 1.9, -3.6); tgt.add(drum); w.drum = drum;
+        [-7, -2, 3].forEach((x) => { const s2 = Box(.6, 1.2, 2.4, DARK, EDGE, .7); s2.position.set(x, .6, -3.6); tgt.add(s2); });
+      } else {
+        const belt = Box(16, .5, 2, 0x16191c, EDGE, .75); belt.position.set(-2, 1, -3.6); tgt.add(belt);
+        for (let i = 0; i < 6; i++) { const b = Box(1.1, .85, 1.1, 0x3a2e1f, OR, .9); b.position.set(-9.5 + i * 2.5, 1.7, -3.6); tgt.add(b); w.boxes.push(b); }
+      }
+      w.look = look;
       const mot = Cyl(.65, 1.4, BODY, EDGE); mot.rotation.z = Math.PI / 2; mot.position.set(6.8, .95, -3.6); tgt.add(mot);
       zone(M, -1.6, -3.6, 18, 3.6); end(M, -1.6, -3.6);
     }
@@ -130,7 +139,8 @@ window.Factory = (function () {
     const PAL = { steel: 0x59626d, dark: 0x2b313a, accent: 0x6b3a14 };
     (spec.extras || []).forEach((x) => {
       const m = x.shape === "cylinder" ? Cyl(x.size[0], x.size[1], PAL[x.color] || PAL.steel, x.color === "accent" ? OR : EDGE, 22, .75) : Box(x.size[0], x.size[1], x.size[2], PAL[x.color] || PAL.steel, x.color === "accent" ? OR : EDGE, .75);
-      m.position.set(x.pos[0], x.pos[1], x.pos[2]); sc.add(m);
+      const rp = x.repeat || { n: 1, dx: 0, dz: 0 };
+      for (let i = 0; i < Math.min(12, rp.n || 1); i++) { const k = i === 0 ? m : m.clone(); k.position.set(Math.max(-16, Math.min(16, x.pos[0] + i * rp.dx)), x.pos[1], Math.max(-10.5, Math.min(10.5, x.pos[2] + i * rp.dz))); sc.add(k); }
     });
     // energy flow lines from the grid entry (front left) to every zone, like the routed paths in the reference
     const entry = [-15, 10]; const color = after ? GR : OR;
@@ -154,7 +164,9 @@ window.Factory = (function () {
         a[i * 3] = vis ? b[0] + Math.sin(i * 7.1) * f * 1.6 : 0; a[i * 3 + 1] = vis ? b[1] + f * 2.8 : -50; a[i * 3 + 2] = vis ? b[2] + Math.cos(i * 3.3) * f * 1.6 : 0; }
       lk.pts.geometry.attributes.position.needsUpdate = true;
     }
-    if (M && w.boxes.length) { const on = active(M, hour, sh), s = on ? 1.3 * M.load_factor + .5 : 0; w.boxes.forEach((b) => { b.position.x += s * dt; if (b.position.x > 5.6) b.position.x = -9.8; }); }
+    if (M && w.boxes.length && w.look !== "machine_row") { const on = active(M, hour, sh), s = on ? 1.3 * M.load_factor + .5 : 0; w.boxes.forEach((b) => { b.position.x += s * dt; if (b.position.x > 5.6) b.position.x = -9.8; }); }
+    if (M && w.look === "machine_row") { const on = active(M, hour, sh); w.boxes.forEach((b, i) => { b.position.x = -9 + i * 2.7 + (on ? Math.sin(t * 6 + i) * .18 : 0); }); }
+    if (M && w.drum) { const on = active(M, hour, sh); w.drum.rotation.x += (on ? .8 : 0) * dt; }
     if (w.fan) { const on = H && active(H, hour, sh); w.fan.rotation.z += (on ? 9 : 0) * dt; }
     if (w.stby) { const out = !(hour >= sh.start && hour < sh.end), v = out && !w.stby.off ? (Math.sin(t * 4) > 0 ? 3 : .5) : 0; w.stby.led.material.emissiveIntensity = v; }
     w.pv.forEach((p) => { p.material.emissive.setHex(0x1d4fd0); p.material.emissiveIntensity = .1 + 1.2 * sunk; });
