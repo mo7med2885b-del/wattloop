@@ -5,53 +5,114 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>WattLoop</title>
 <link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/flow.css">
 </head>
 <body>
-<header>
-  <div class="brand"><span class="logo">⚡</span><b>WattLoop</b><span class="tag">an energy twin that tests its own fixes</span></div>
-  <div class="tabs"><button id="tab-twin" class="on">Live twin</button><button id="tab-flow">Agent workflow</button></div>
-  <div class="hdr-right"><span id="live" class="pill">checking…</span><span class="pill warn">Simulated estimates · engineer must verify on site</span></div>
-</header>
-<main>
-  <aside class="left">
-    <div class="card">
-      <h3>Facility</h3>
-      <div class="photo"><img id="photo" src="/api/demo/image" alt="synthetic demo plant"><svg id="overlay" viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg></div>
-      <label>Description <textarea id="desc" rows="6" autocomplete="off"></textarea></label>
-      <label>Monthly electricity bill (kWh) <input id="bill" type="number" autocomplete="off"></label>
-      <button id="run" class="primary">Build the twin</button>
-      <p class="muted small">Demo uses a synthetic plant. No real facility data.</p>
-    </div>
-    <div class="card" id="calcard">
-      <h3>Twin vs the real bill</h3>
-      <svg id="calchart" viewBox="0 0 320 150"></svg>
-      <div id="calnote" class="muted small">Waiting…</div>
-    </div>
-  </aside>
-  <section class="center">
-    <div id="twin" class="twinbox"></div>
-    <svg id="graph" viewBox="0 0 900 640" hidden></svg>
+<div class="app">
+  <header class="top">
+    <div class="logo"><svg viewBox="0 0 28 28" width="28" height="28"><path d="M9 6 L4 6 L4 22 L9 22 M19 6 L24 6 L24 22 L19 22" fill="none" stroke="#ff6a00" stroke-width="2.4"/><circle cx="14" cy="14" r="3" fill="#ff6a00"/></svg>
+      <div><b>WattLoop</b><small>Energy Management System</small></div></div>
+    <nav class="scenes" id="scenes"><button data-m="now" class="on">Plant now</button><button data-m="after">After verified fixes</button><button data-m="compare">Compare</button></nav>
+    <div class="top-right"><button class="demobtn" id="demoBtn" title="Load a pre-computed twin instantly (no AI call)">▶ Demo</button><span class="chip" id="live">checking…</span><span class="clock"><b id="clock">06:00:00</b><i id="dayTag">simulated day</i></span><button class="wfbtn" id="wfOpen"><img src="/static/assets/meta-symbol-color.png" alt="">Agent workflow</button></div>
+  </header>
+
+  <div class="main">
+    <aside class="side left">
+      <section class="pn"><div class="hd">FACILITY<i class="ci"></i></div>
+        <div class="pb">
+          <div class="photo"><img id="photo" src="/api/demo/image" alt="Synthetic demo plant"><svg id="overlay" viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg><span class="synth">synthetic image · Muse Image</span></div>
+          <div class="picker"><button id="pick" type="button">Choose image ▾</button>
+            <div class="menu" id="pickMenu" hidden><button data-p="gallery" type="button">🖼 Image gallery</button><button data-p="upload" type="button">⬆ Upload your own</button></div>
+            <input type="file" id="file" accept="image/jpeg,image/png,image/webp" hidden></div>
+          <div id="imgstatus" class="imgstatus" hidden></div>
+          <label>Description <span class="sub">(optional)</span><textarea id="desc" rows="4" autocomplete="off" placeholder="What do you know about the plant? Equipment, shifts, problems you hear or see."></textarea></label>
+          <label>Monthly bill (kWh)<input id="bill" type="number" inputmode="numeric" autocomplete="off"></label>
+          <button id="run" class="primary">Build the twin</button>
+        </div></section>
+      <section class="pn"><div class="hd">WASTE FLAGS<i class="ci"></i></div><div class="pb"><ul class="flags" id="flags"></ul></div></section>
+      <section class="pn"><div class="hd">TWIN VS THE REAL BILL<i class="ci"></i></div><div class="pb"><svg id="calchart" viewBox="0 0 280 110"></svg><div id="calnote" class="muted small">Waiting for a run.</div></div></section>
+    </aside>
+
+    <section class="stage" id="stage">
+      <div id="iso" class="iso"></div>
+      <svg id="leaders" class="leaders"></svg>
+      <div id="callouts" class="callouts"></div>
+      <div class="caption" id="caption"><b id="capT">Energy twin</b><span id="capS">Choose an image and press Build the twin.</span></div>
+      <div class="vg" id="vg" hidden><div class="vgt">Maximum</div><div class="vgbar"><i id="vgfill"></i><em id="vgknob"></em></div><div class="vgt">Minimum</div><div class="vgv" id="vgv">–</div><div class="vgn" id="vgn">–</div></div>
+      <button class="overview" id="overview" hidden>⟲ Overview</button>
+      <div class="timeline" id="timeline"></div>
+    </section>
+
+    <aside class="side right">
+      <section class="pn"><div class="hd">EQUIPMENT OVERVIEW<i class="ci"></i></div>
+        <div class="pb radar"><svg id="radar" viewBox="0 0 120 120"></svg><div><span class="lbl">ALARM LOG</span><div class="alog" id="alog"><div class="a">No events yet.</div></div></div></div></section>
+      <section class="pn"><div class="hd">OPTIMAL PARAMETER RECOMMENDATION<i class="ci"></i></div>
+        <div class="pb"><span class="lbl">FIX ATTEMPTS</span><table class="tbl" id="fixes"><tbody><tr><td class="muted">No attempts yet.</td></tr></tbody></table><div id="fixnote" class="muted small"></div></div></section>
+      <section class="pn" id="result"><div class="hd">ENGINEER ON DUTY<i class="ci"></i></div>
+        <div class="pb"><div class="eng"><div class="av"><svg viewBox="0 0 60 60"><circle cx="30" cy="22" r="11" fill="#555"/><path d="M12 52 C12 38 48 38 48 52 Z" fill="#555"/><path d="M17 17 C17 5 43 5 43 17 Z" fill="#ff6a00"/><rect x="14" y="16" width="32" height="4" rx="2" fill="#ff8a30"/></svg></div>
+          <div><b>REQUIRES ENGINEER REVIEW</b><div class="muted small" id="summary">Run the twin to get a verified plan.</div></div></div>
+          <div id="critic" class="small"></div>
+          <div class="btns"><button data-a="approve">Approve for site audit</button><button data-a="modify">Modify</button><button data-a="reject">Reject</button></div><div id="decided" class="muted small"></div></div></section>
+      <section class="pn stat"><span id="stat">0 model calls · $0.0000</span></section>
+    </aside>
+  </div>
+
+  <section class="strip">
+    <div class="mini pn"><div class="hd2">Energy at a glance</div><svg id="minimap" viewBox="0 0 160 90"></svg><div class="tot"><span>Total energy</span><b id="totkwh">–</b><small>kWh / day</small></div></div>
+    <div class="zone pn"><div class="tabs" id="ztabs"></div>
+      <div class="big"><div class="bn"><small id="bnLabelA">NOW</small><b id="bnA">0</b><span>kW</span></div><div class="bn o"><small id="bnLabelB">AFTER</small><b id="bnB">0</b><span>kW</span></div>
+        <div class="deltas"><div><i>▼</i><b id="dSave">–</b><small>kWh/day saved</small></div><div><i>▼</i><b id="dPct">–</b><small>% lower</small></div></div></div></div>
+    <div class="gauges pn"><div class="hd2">Waste gauges</div><div class="gg4" id="gauges"></div></div>
+    <div class="bars pn"><div class="hd2">Load by hour <span class="legend"><i class="d b"></i>now <i class="d a"></i>after fixes</span></div><svg id="bars" viewBox="0 0 300 100" preserveAspectRatio="none"></svg></div>
+    <div class="cmp pn"><div class="hd2">Energy by machine <small>kWh / month</small></div><table class="tbl2" id="cmp"><tbody></tbody></table>
+      <div class="cost"><div><b id="egp">–</b><span>EGP saved / year</span></div><div><b id="pay">–</b><span>payback (months)</span></div><div><b id="conf">–</b><span>confidence</span></div></div></div>
   </section>
-  <aside class="right">
-    <div class="card"><h3>Daily load (kW)</h3><svg id="loadchart" viewBox="0 0 320 150"></svg>
-      <div class="legend"><i class="d b"></i>before <i class="d a"></i>after fixes</div></div>
-    <div class="card"><h3>Fix attempts</h3><div id="fixes" class="fixes muted small">No attempts yet.</div></div>
-    <div class="card" id="result" hidden>
-      <h3>Verified in the twin</h3>
-      <div class="tiles" id="tiles"></div>
-      <p id="summary" class="small"></p>
-      <div id="critic" class="small"></div>
-      <div class="gate"><b>REQUIRES ENGINEER REVIEW</b>
-        <div class="btns"><button data-a="approve">Approve for site audit</button><button data-a="modify">Modify</button><button data-a="reject">Reject</button></div>
-        <div id="decided" class="muted small"></div></div>
+</div>
+
+<div class="modal" id="gal" hidden><div class="mcard"><div class="mh"><h3>Image gallery</h3><span class="muted small">Synthetic factory images made with Muse Image. Each one is analysed live by the models when you pick it; nothing is pre-processed.</span><button id="galClose" type="button" aria-label="Close">×</button></div><div class="gg" id="galGrid"></div></div></div>
+
+<!-- Agent workflow: full-screen glass view -->
+<div class="wf" id="wf" hidden role="dialog" aria-label="Agent workflow">
+  <header class="wf-head">
+    <button class="wf-home" id="wfHome" type="button">← Home</button>
+    <div class="wf-brand"><img src="/static/assets/meta-symbol-color.png" alt=""><div><h2>Agent workflow</h2><div class="sub">Every node animates only from a real run event</div></div></div>
+    <span class="sp"></span>
+    <span class="wf-model" id="wfModelChip"><img src="/static/assets/meta-symbol-color.png" alt=""><span id="wfModel">Muse Spark 1.3</span></span>
+    <button class="wf-run" id="wfRun" type="button">Run workflow</button>
+    <button class="wf-close" id="wfClose" type="button" aria-label="Close">×</button>
+  </header>
+  <div class="wf-main">
+    <div class="wf-stage"><svg id="wfSvg" viewBox="0 0 1000 800" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="wf-legend"><span><i class="ai"></i>Muse model agent</span><span><i class="code"></i>Code, no model</span><span><i class="human"></i>Engineer checkpoint</span></div>
+      <button class="wf-reset" id="wfReset" type="button">Reset layout</button>
+      <div class="wf-zoom"><button id="wfZin" type="button">+</button><button id="wfZout" type="button">−</button></div>
     </div>
-    <div class="card"><h3>Agent detail</h3><div id="detail" class="small muted">Click a node.</div></div>
-    <div class="card stats"><span id="stat">0 calls · $0.0000 · 0.0 s</span></div>
-  </aside>
-</main>
+    <aside class="wf-side">
+      <div class="glass wf-title"><img src="/static/assets/meta-symbol-color.png" alt=""><div><small>Energy audit</small><h3 id="wfCaseTitle">Delta Foods (synthetic)</h3></div><span class="wf-status" id="wfStatus">Idle</span></div>
+      <div class="wf-tiles">
+        <div class="glass wf-tile"><b id="tDone">0/9</b><span>Agents finished</span></div>
+        <div class="glass wf-tile"><b id="tRej">–</b><span>Fixes rejected</span></div>
+        <div class="glass wf-tile"><b id="tErr">–</b><span>Twin error vs bill</span></div>
+        <div class="glass wf-tile"><b id="tCalls">0</b><span id="tCost">Model calls</span></div>
+        <div class="glass wf-tile risk"><b id="tSave">Not run yet</b><span>Verified saving (simulated)</span></div>
+      </div>
+      <div class="glass wf-brief" id="wfBrief" hidden></div>
+      <div class="glass wf-detail" id="wfDetail"><h4>Agent</h4><div class="meta">Click a node to see its output.</div></div>
+      <div class="glass wf-trace"><h4>Live trace</h4><div class="wf-log" id="wfLog"></div></div>
+      <form class="glass wf-ask" id="wfAsk">
+        <div class="wf-chips"><span><img src="/static/assets/meta-symbol-color.png" alt=""><b id="wfAskModel">Muse Spark 1.3</b></span><span>answers from the verified result only</span></div>
+        <div class="answer" id="wfAnswer" hidden></div>
+        <div class="row"><input id="wfQ" autocomplete="off" placeholder="Ask about the result, e.g. which fix pays back fastest?"><button type="submit" aria-label="Ask">➤</button></div>
+      </form>
+    </aside>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-<script src="/static/twin3d.js"></script>
+<script src="/static/factory.js"></script>
+<script src="/static/icons.js"></script>
+<script src="/static/flow.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

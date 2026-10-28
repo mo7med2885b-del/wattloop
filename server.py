@@ -103,6 +103,40 @@ def preview():
     return {"spec": spec, "hourly": [round(v, 1) for v in twin.hourly_kw(spec)]}
 
 
+@app.get("/api/demo/instant")
+def demo_instant():
+    """Pre-computed demo twin: real twin code and real verifier, no model call. Round 1 is deliberately over-aggressive so the rejection shows."""
+    from wattloop import twin
+    spec = demo.TRUTH
+    generic = pipeline.generic_spec({"start": 6, "end": 22, "days_per_week": 6})
+    bill = demo.case()["bill_kwh"]
+    round1 = [{"type": "vsd_pump", "target": "pumps"}, {"type": "repair_leaks", "target": "air", "target_leak": 0.0}, {"type": "led_retrofit", "target": "lights"},
+              {"type": "lighting_controls", "target": "lights"}, {"type": "hvac_setpoint", "target": "hvac", "setpoint_c": 30}, {"type": "standby_shutdown", "target": "standby"}, {"type": "solar_pv", "kwp": 300}]
+    round2 = [{"type": "repair_leaks", "target": "air", "target_leak": 0.05}, {"type": "hvac_setpoint", "target": "hvac", "setpoint_c": 24}, {"type": "solar_pv", "kwp": 40}]
+    accepted: list[dict] = []
+    rounds = []
+    for fixes in (round1, round2):
+        res = []
+        for f in fixes:
+            try:
+                ev = twin.evaluate(spec, accepted + [f]); solo = twin.evaluate(spec, [f])
+                ok = not ev["violations"] and solo["saved_kwh_month"] > 0
+                if ok:
+                    accepted.append(f)
+                res.append({"fix": f, "why": "", "status": "accepted" if ok else "rejected", "reason": "" if ok else "; ".join(ev["violations"]) or "no saving", "saved_egp_year": solo["saved_egp_year"], "saved_kwh_month": solo["saved_kwh_month"]})
+            except twin.FixError as e:
+                res.append({"fix": f, "why": "", "status": "rejected", "reason": str(e), "saved_egp_year": 0, "saved_kwh_month": 0})
+        rounds.append(res)
+    ev = twin.evaluate(spec, accepted)
+    sens = twin.sensitivity(spec, accepted)
+    crit = {"challenges": [{"fix": "all", "concern": "Savings come from a model of the plant, not measurements. An engineer must verify on site.", "severity": "medium"}], "overall": "pre-computed demo"}
+    arb = pipeline.arbiter(0.0, ev, sens, crit, 0)
+    result = {"plan": accepted, "evaluation": {k: v for k, v in ev.items() if k != "spec"}, "sensitivity": sens, "critic": crit, "arbiter": arb,
+              "summary": f"Demo (pre-computed, no AI): the twin suggests {len(accepted)} verified fixes could save about {ev['saved_kwh_month']:.0f} kWh a month, around {ev['saved_egp_year']:,} EGP a year. These are simulated estimates; an engineer must verify them on site.",
+              "calibration_err_pct": 0.0, "cost_usd": 0.0, "model_calls": 0, "spec_after": ev["spec"]}
+    return {"spec": spec, "description": demo.DESCRIPTION, "bill_kwh": bill, "calibration": [round(twin.monthly_kwh(generic)), round(twin.monthly_kwh(spec))], "rounds": rounds, "result": result}
+
+
 @app.post("/api/run")
 def start(req: RunReq):
     case = {"shift": {"start": 6, "end": 22, "days_per_week": 6}}
