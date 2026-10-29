@@ -166,7 +166,7 @@ const WF = (() => {
     if (id === "critic") (o.challenges || []).forEach((c) => add(ul, "li", `${c.concern} (${c.severity})`));
     if (id === "report") add(ul, "li", "Brief written from verified numbers only");
     if (id === "gate") { add(ul, "li", "The engineer approves, modifies or rejects. Nothing is final without this step."); if (gateResult) { const b = add(box, "button", "Open the decision card", "wf-cptoggle"); b.type = "button"; b.addEventListener("click", cpOpen); } }
-    add(box, "div", `${r.model ? pretty(r.model) : "Code, no model"}${r.ms ? " · " + (r.ms / 1000).toFixed(1) + " s" : ""}${r.usd ? " · $" + Number(r.usd).toFixed(5) : ""}${r.fallback ? " · fallback" + (r.note ? " (" + r.note + ")" : "") : ""}`, "meta");
+    add(box, "div", `${r.model ? pretty(r.model) : "Code, no model"}${r.ms ? " · " + (r.ms / 1000).toFixed(1) + " s" : ""}${r.fallback ? " · fallback" + (r.note ? " (" + r.note + ")" : "") : ""}`, "meta");
   }
 
   function apply(ev) {
@@ -179,7 +179,7 @@ const WF = (() => {
         const bad = ev.output && (ev.output.error || ev.output.ok === false); g.classList.add("done", ev.fallback ? "st-warn" : bad ? "st-bad" : (DEF.find((d) => d[0] === id) || [])[3] === "code" ? "st-code" : "st-against"); pop(id);
         g.querySelector(".wf-stance").textContent = summarize(id, ev);
         if (ev.model) { const mn = g.querySelector(".wf-mname"); if (mn) mn.textContent = pretty(ev.model); }
-        done += 1; $$("tDone").textContent = `${done}/12`; calls += ev.calls || 0; cost += ev.usd || 0; $$("tCalls").textContent = String(calls); $$("tCost").textContent = `Model calls · $${cost.toFixed(4)}`;
+        done += 1; $$("tDone").textContent = `${done}/12`; calls += ev.calls || 0; cost += ev.usd || 0; $$("tCalls").textContent = String(calls); $$("tCost").textContent = "Model calls";
         (INLINES[id] || []).forEach((l) => pulse(l, "back", 0.7, true));
         log(`${nameOf(id)}: ${summarize(id, ev).toLowerCase()}${ev.fallback && ev.note ? " (" + ev.note + ")" : ""}`, ev.fallback ? "warn" : bad ? "bad" : "ok"); break; }
       case "loop": $$("tErr").textContent = (ev.err_pct > 0 ? "+" : "") + ev.err_pct + "%"; pulse("design_calibrate", "", 0.5); log(`Calibration ${ev.iter}: twin ${Math.round(ev.twin_kwh).toLocaleString()} vs bill ${Math.round(ev.bill_kwh).toLocaleString()} kWh (${ev.err_pct > 0 ? "+" : ""}${ev.err_pct}%)`, Math.abs(ev.err_pct) <= 5 ? "ok" : "warn"); break;
