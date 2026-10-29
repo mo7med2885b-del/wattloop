@@ -76,14 +76,25 @@ window.Factory = (function () {
     if (P) {
       begin(P); const n = Math.min(3, P.count);
       for (let i = 0; i < n; i++) {
-        const g = new T.Group(); g.position.set(-10.5 + i * 3.6, 0, 6);
+        const g = new T.Group(); g.position.set(-10.5 + i * 3.6, 0, 6); const vert = P.design && P.design.orient === "vertical";
         const base = Box(3, .35, 1.9, DARK, EDGE, .7); base.position.y = .18; g.add(base);
-        const motor = Cyl(.72, 2.1, BODY, EDGE, 24, .6); motor.rotation.z = Math.PI / 2; motor.position.set(-.35, 1.15, 0); g.add(motor);
-        const vol = Cyl(.9, .6, 0x25292d, EDGE, 24, .6); vol.rotation.z = Math.PI / 2; vol.position.set(1.1, 1.15, 0); g.add(vol);
-        const imp = Box(.1, 1.3, .16, OR, OR, 1); imp.position.set(1.42, 1.15, 0); g.add(imp);
-        const valve = new T.Mesh(new T.TorusGeometry(.32, .08, 8, 20), mat(P.vsd ? GR : 0xff3b30, { emissive: P.vsd ? 0x0b4a2a : 0x600c08, emissiveIntensity: 1, roughness: .4 })); valve.position.set(2.05, 2.1, 0); valve.rotation.y = Math.PI / 2; g.add(valve);
-        const pipe = Box(.24, 1.1, .24, 0x2a2e33, EDGE, .6); pipe.position.set(2.05, 1.45, 0); g.add(pipe);
-        tgt.add(g); w.pumps.push({ imp, valve });
+        let imp, valve;
+        if (vert) {   // vertical in-line pump: volute at the bottom, tall motor standing on it, red handwheel valve on the pipe
+          const vol = Cyl(.95, .8, 0x25292d, EDGE, 24, .7); vol.position.set(0, .8, 0); g.add(vol);
+          const col = Cyl(.45, .7, DARK, EDGE, 16, .7); col.position.set(0, 1.5, 0); g.add(col);
+          const motor = Cyl(.62, 1.7, BODY, EDGE, 24, .7); motor.position.set(0, 2.7, 0); g.add(motor);
+          const fan = Cyl(.66, .12, DARK, EDGE, 24, .6); fan.position.set(0, 3.6, 0); g.add(fan);
+          imp = Box(1.0, .1, .14, OR, OR, 1); imp.position.set(0, 3.68, 0); g.add(imp);
+          const pipe = Cyl(.22, 1.8, 0x2a2e33, EDGE, 14, .6); pipe.rotation.z = Math.PI / 2; pipe.position.set(1.7, .85, 0); g.add(pipe);
+          valve = new T.Mesh(new T.TorusGeometry(.3, .07, 8, 20), mat(P.vsd ? GR : 0xff3b30, { emissive: P.vsd ? 0x0b4a2a : 0x600c08, emissiveIntensity: 1, roughness: .4 })); valve.position.set(1.7, 1.55, 0); valve.rotation.x = Math.PI / 2; g.add(valve);
+        } else {
+          const motor = Cyl(.72, 2.1, BODY, EDGE, 24, .6); motor.rotation.z = Math.PI / 2; motor.position.set(-.35, 1.15, 0); g.add(motor);
+          const vol = Cyl(.9, .6, 0x25292d, EDGE, 24, .6); vol.rotation.z = Math.PI / 2; vol.position.set(1.1, 1.15, 0); g.add(vol);
+          imp = Box(.1, 1.3, .16, OR, OR, 1); imp.position.set(1.42, 1.15, 0); g.add(imp);
+          valve = new T.Mesh(new T.TorusGeometry(.32, .08, 8, 20), mat(P.vsd ? GR : 0xff3b30, { emissive: P.vsd ? 0x0b4a2a : 0x600c08, emissiveIntensity: 1, roughness: .4 })); valve.position.set(2.05, 2.1, 0); valve.rotation.y = Math.PI / 2; g.add(valve);
+          const pipe = Box(.24, 1.1, .24, 0x2a2e33, EDGE, .6); pipe.position.set(2.05, 1.45, 0); g.add(pipe);
+        }
+        tgt.add(g); w.pumps.push({ imp, valve, axis: vert ? "y" : "x" });
       }
       zone(P, -10.5 + (n - 1) * 1.8 + .5, 6, n * 3.6 + 2, 4.4);
       const h = glow("heatR", "rgba(255,70,40,.8)", 7, 2.2); h.position.set(-8, 2.2, 6); tgt.add(h); w.heat[P.id] = h; end(P, -10.5 + (n - 1) * 1.8 + .5, 6);
@@ -104,8 +115,17 @@ window.Factory = (function () {
     const M = byType("motors")[0];
     if (M) {
       begin(M); const look = (M.design && M.design.look) || "conveyor";
-      if (look === "machine_row") {   // looms, presses, lathes: a row of similar machines
-        for (let i = 0; i < 6; i++) { const b = Box(2.1, 1.5, 1.7, BODY, EDGE, .8); b.position.set(-9 + i * 2.7, .75, -3.6); tgt.add(b); const top = Box(1.6, .25, 1.2, 0x3a2e1f, OR, .9); top.position.set(-9 + i * 2.7, 1.62, -3.6); tgt.add(top); w.boxes.push(top); }
+      const u = Math.max(2, Math.min(14, (M.design && M.design.units) || 6)), span = 17, step = span / u, x0 = -2 - span / 2 + step / 2;
+      if (look === "machine_row" || look === "loom_rows") {   // looms, mixers, saws: rows of similar machines (loom_rows = two rows)
+        const rows = look === "loom_rows" ? [-1.3, 1.3] : [0], k = Math.min(1, step / 2.1);
+        rows.forEach((dz, r) => { for (let i = 0; i < u; i++) { const b = Box(2.0 * k + .2, 1.4, 1.5, BODY, EDGE, .8), bx = x0 + i * step; b.position.set(bx, .7, -3.6 + dz); tgt.add(b); const top = Box(1.5 * k + .1, .25, 1.1, 0x3a2e1f, OR, .9); top.position.set(bx, 1.52, -3.6 + dz); top.userData.bx = bx; tgt.add(top); w.boxes.push(top); } });
+      } else if (look === "lathe_row") {   // large machine tools: long bed, headstock, chuck
+        for (let i = 0; i < u; i++) { const bx = x0 + i * step, k = Math.min(1.1, step / 3.4), bed = Box(3.2 * k, .9, 1.3, BODY, EDGE, .85); bed.position.set(bx, .6, -3.6); tgt.add(bed);
+          const head = Box(1.0 * k, 1.7, 1.3, DARK, EDGE, .85); head.position.set(bx - 1.1 * k, 1.5, -3.6); tgt.add(head); const chuck = Cyl(.45, .5, 0x3a2e1f, OR, 18, .9); chuck.rotation.z = Math.PI / 2; chuck.position.set(bx - .45 * k, 1.5, -3.6); tgt.add(chuck); chuck.userData.bx = bx; w.boxes.push(chuck); }
+      } else if (look === "press_row") {   // tall press frames: base, four posts, head
+        for (let i = 0; i < u; i++) { const bx = x0 + i * step, k = Math.min(1.1, step / 3), base = Box(2.2 * k, .5, 2.0, DARK, EDGE, .8); base.position.set(bx, .25, -3.6); tgt.add(base);
+          [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a2, b2]) => { const post = Box(.2, 3.4, .2, BODY, EDGE, .8); post.position.set(bx + a2 * .85 * k, 2.2, -3.6 + b2 * .8); tgt.add(post); });
+          const head = Box(2.0 * k, .9, 1.9, BODY, EDGE, .85); head.position.set(bx, 4.0, -3.6); tgt.add(head); const ram = Box(.8 * k, 1.3, .8, 0x3a2e1f, OR, .9); ram.position.set(bx, 2.6, -3.6); ram.userData.bx = bx; tgt.add(ram); w.boxes.push(ram); }
       } else if (look === "big_machine") {   // kiln, dryer drum, tunnel oven: one long body that turns or glows
         const drum = Cyl(1.3, 13, BODY, EDGE, 28, .8); drum.rotation.z = Math.PI / 2; drum.position.set(-2, 1.9, -3.6); tgt.add(drum); w.drum = drum;
         [-7, -2, 3].forEach((x) => { const s2 = Box(.6, 1.2, 2.4, DARK, EDGE, .7); s2.position.set(x, .6, -3.6); tgt.add(s2); });
@@ -173,15 +193,15 @@ window.Factory = (function () {
     let lit = false;
     if (L) { lit = active(L, hour, sh); if (!lit && !L.controls && L.after_hours_h > 0) lit = ((hour - sh.end + 24) % 24) < L.after_hours_h; }
     w.lights.forEach((m, i) => { m.material.emissive.setHex(lit ? (L.led ? 0xbfefff : 0xffd090) : 0); m.material.emissiveIntensity = lit ? 1.6 : 0; const g = w.glows[i].material; g.opacity += ((lit ? .8 : 0) - g.opacity) * Math.min(1, dt * 6); });
-    if (P) { const on = active(P, hour, sh), s = on ? (P.vsd ? .6 + 5 * P.flow_demand : 9) : 0; w.pumps.forEach((p) => { p.imp.rotation.x += s * dt; p.valve.scale.setScalar(!P.vsd && on ? .8 + .14 * Math.sin(t * 6) : 1); }); }
+    if (P) { const on = active(P, hour, sh), s = on ? (P.vsd ? .6 + 5 * P.flow_demand : 9) : 0; w.pumps.forEach((p) => { p.imp.rotation[p.axis || "x"] += s * dt; p.valve.scale.setScalar(!P.vsd && on ? .8 + .14 * Math.sin(t * 6) : 1); }); }
     if (w.leaks) {
       const on = C && active(C, hour, sh), fr = C ? C.leak : 0, lk = w.leaks, a = lk.pts.geometry.attributes.position.array;
       for (let i = 0; i < lk.n; i++) { lk.ph[i] = (lk.ph[i] + dt * (.5 + (i % 5) * .15)) % 1; const f = lk.ph[i], b = lk.base[i % 3], vis = on && i / lk.n < Math.min(1, fr * 4);
         a[i * 3] = vis ? b[0] + Math.sin(i * 7.1) * f * 1.6 : 0; a[i * 3 + 1] = vis ? b[1] + f * 2.8 : -50; a[i * 3 + 2] = vis ? b[2] + Math.cos(i * 3.3) * f * 1.6 : 0; }
       lk.pts.geometry.attributes.position.needsUpdate = true;
     }
-    if (M && w.boxes.length && w.look !== "machine_row") { const on = active(M, hour, sh), s = on ? 1.3 * M.load_factor + .5 : 0; w.boxes.forEach((b) => { b.position.x += s * dt; if (b.position.x > 5.6) b.position.x = -9.8; }); }
-    if (M && w.look === "machine_row") { const on = active(M, hour, sh); w.boxes.forEach((b, i) => { b.position.x = -9 + i * 2.7 + (on ? Math.sin(t * 6 + i) * .18 : 0); }); }
+    if (M && w.boxes.length && (w.look === "conveyor" || !w.look)) { const on = active(M, hour, sh), s = on ? 1.3 * M.load_factor + .5 : 0; w.boxes.forEach((b) => { b.position.x += s * dt; if (b.position.x > 5.6) b.position.x = -9.8; }); }
+    if (M && w.look && w.look !== "conveyor" && w.look !== "big_machine") { const on = active(M, hour, sh); w.boxes.forEach((b, i) => { b.position.x = (b.userData.bx ?? b.position.x) + (on ? Math.sin(t * 6 + i) * .15 : 0); }); }
     if (M && w.drum) { const on = active(M, hour, sh); w.drum.rotation.x += (on ? .8 : 0) * dt; }
     if (w.fan) { const on = H && active(H, hour, sh); w.fan.rotation.z += (on ? 9 : 0) * dt; }
     if (w.stby) { const out = !(hour >= sh.start && hour < sh.end), v = out && !w.stby.off ? (Math.sin(t * 4) > 0 ? 3 : .5) : 0; w.stby.led.material.emissiveIntensity = v; }

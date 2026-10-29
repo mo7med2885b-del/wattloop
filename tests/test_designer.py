@@ -59,3 +59,14 @@ def test_look_and_repeat_are_validated():
     assert "look" not in d["layout"]["pumps"]                         # only the production line can change its look
     assert all(1 <= e["repeat"]["n"] <= 12 and abs(e["repeat"]["dx"]) <= 4 for e in d["extras"])
     assert sum(e["repeat"]["n"] for e in d["extras"]) <= designer.MAX_MESHES
+
+
+def test_new_looks_units_and_orientation():
+    s = spec()
+    raw = {"layout": [{"id": "belts", "x": 0, "z": -3, "look": "press_row", "units": 99}, {"id": "pumps", "x": -9, "z": 6, "orient": "vertical"}, {"id": "air", "x": 7, "z": 5, "orient": "vertical", "look": "lathe_row"}]}
+    d = designer.validate_design(raw, s)
+    assert d["layout"]["belts"]["look"] == "press_row" and d["layout"]["belts"]["units"] == 14
+    assert d["layout"]["pumps"]["orient"] == "vertical"
+    assert "orient" not in d["layout"]["air"] and "look" not in d["layout"]["air"]
+    designer.apply_design(s, d)
+    assert next(c for c in s["components"] if c["id"] == "pumps")["design"]["orient"] == "vertical"
