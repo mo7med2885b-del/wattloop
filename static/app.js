@@ -176,10 +176,16 @@ const App = (() => {
   // Scene Reviewer: Muse Spark compares the photo with a render of the 3D twin and refines the design once (runs while calibration continues)
   async function reviewScene(rid) {
     try {
-      if (rid !== runId || !running) return; const png = Factory.snapshot("now"); if (!png) return; alog("Scene reviewer: comparing the 3D with the photo…");
+      if (rid !== runId || !running) return; const prev = JSON.parse(JSON.stringify(calSpec)); const png = Factory.snapshot("now"); if (!png) return; alog("Scene reviewer: comparing the 3D with the photo…");
       const r = await fetch("/api/scene_review", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run_id: rid, render_b64: png, mode: "revise" }) }); if (!r.ok || rid !== runId) return;
-      const o = await r.json(); if (o.spec) { calSpec = o.spec; const z = Array(24).fill(0); Factory.setSpecs(o.spec, o.spec, S.partsA, S.partsA, S.hourA.length ? S.hourA : z, S.hourA.length ? S.hourA : z); renderBuild(o.spec, "refined layout"); }
-      alog(`Scene reviewer: match ${o.score ?? "?"}/10` + (o.mismatches && o.mismatches[0] ? " - fixed: " + o.mismatches[0] : ""), "ok");
+      const o = await r.json(), hz = S.hourA.length ? S.hourA : Array(24).fill(0), apply = (sp) => { calSpec = sp; Factory.setSpecs(sp, sp, S.partsA, S.partsA, hz, hz); renderBuild(sp, "refined layout"); };
+      if (!o.spec) return; apply(o.spec); await new Promise((res) => setTimeout(res, 1800));
+      const png2 = Factory.snapshot("now"), r2 = await fetch("/api/scene_review", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run_id: rid, render_b64: png2, mode: "judge" }) }), o2 = r2.ok ? await r2.json() : {};
+      if (o2.score != null && o.score != null && o2.score < o.score) {   // the refinement made it worse: keep the earlier design
+        await fetch("/api/scene_review", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run_id: rid, render_b64: png2, mode: "restore", spec: prev }) }); apply(prev);
+        alog(`Scene reviewer: refinement scored ${o2.score}/10 vs ${o.score}/10, kept the original design`, ""); return;
+      }
+      alog(`Scene reviewer: match ${o.score ?? "?"}/10 -> ${o2.score ?? "?"}/10` + (o.mismatches && o.mismatches[0] ? " - fixed: " + o.mismatches[0] : ""), "ok");
     } catch (e) { /* the review is optional: the run continues without it */ }
   }
   function overlay(boxes) { const o = $("#overlay"); o.innerHTML = ""; boxes.forEach((b) => { const [x1, y1, x2, y2] = b.box; el("rect", { x: x1, y: y1, width: x2 - x1, height: y2 - y1, fill: "rgba(255,106,0,.12)", stroke: "#ff6a00", "stroke-width": 3, "vector-effect": "non-scaling-stroke" }, o); el("text", { x: x1 + 6, y: y1 + 28, fill: "#ff9a4d", "font-size": 26, "font-weight": 700 }, o).textContent = b.phrase; }); }

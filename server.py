@@ -135,8 +135,19 @@ def scene_review(req: ReviewReq):
             raise HTTPException(400, "need a run or a gallery image with a spec")
         photo = scene.demo_png() if item["id"] == "demo" else (GALLERY / Path(item["file"]).name).read_bytes()
         spec, desc, budget = req.spec, "", meta.Budget(max_calls=2)
-    if photo is None or spec is None or req.mode not in ("judge", "revise"):
+    if photo is None or spec is None or req.mode not in ("judge", "revise", "restore"):
         raise HTTPException(400, "nothing to review")
+    if req.mode == "restore":   # the refinement scored lower: put the earlier design back
+        if run is None or not req.spec:
+            raise HTTPException(400, "restore needs a run and the earlier spec")
+        old = {c["id"]: c.get("design") for c in req.spec.get("components", [])}
+        for c in run.spec["components"]:
+            if old.get(c["id"]):
+                c["design"] = old[c["id"]]
+            else:
+                c.pop("design", None)
+        run.spec["extras"] = req.spec.get("extras", [])
+        return {"restored": True, "spec": run.spec}
     render = clean_image(req.render_b64)
     r = meta.chat(budget, designer.REVIEW_SYSTEM, designer.review_prompt(spec, req.mode, desc), images=[photo, render], effort="medium", max_tokens=8000)
     j = r["json"] or {}
