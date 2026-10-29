@@ -10,25 +10,27 @@ Give WattLoop a photo (or a few sentences about the machines) and the monthly el
 
 ---
 
-## Why this matters
+## Why this matters (a global problem)
 
-Energy is one of the biggest controllable costs in industry, and most of it is hidden in motors, pumps, compressed air, lighting and cooling.
+Industry is the biggest energy user on Earth, and most of its electricity is hidden in motors, pumps, fans and compressed air.
 
-- Industry used about **25% of Egypt's electricity** in 2015 (29% by end-2025), and **motor-driven systems are over 70%** of manufacturing electricity. A UNIDO-linked study put the *technical* savings potential in Egyptian manufacturing at **49% for pumps, 38% for fans and 39% for compressed air** ([Global Efficiency Intelligence](https://www.globalefficiencyintel.com/ee-potential-in-industrial-motor-systems-in-egypt)). These are potentials, not promises.
-- Costs keep rising: industrial gas went from $4.75 to $5.75/MMBtu in September 2025 ([Ahram Online](https://english.ahram.org.eg/NewsContent/3/14/553608/Business/Markets--Companies/Natural-gas-price-hike-triggers-new-rules-for-Egyp.aspx)), and Egypt's grid hit a record 40,000 MW peak on 11 August 2026 ([Ahram Online](https://english.ahram.org.eg/News/574471.aspx)).
-- Yet most small and medium plants **never get an audit**: it takes weeks, costs money, and the recommendations arrive without proof. Owners are left guessing which fix pays back.
+- Industry uses **nearly 40% of the world's final energy** and drove about two-thirds of the growth in energy demand since 2019, while its efficiency gains have slowed to **under 0.5% a year** ([IEA, Energy Efficiency 2025](https://www.iea.org/reports/energy-efficiency-2025/industry)).
+- **Electric motor systems use 53% of all electricity worldwide (13,462 TWh) and 72% of industrial electricity (7,740 TWh)** ([IEA 4E, 2023 data](https://www.iea-4e.org/wp-content/uploads/2025/12/4E-Policy-Brief-EMSA-9-20251218.pdf)).
+- The IEA estimates **20-30% of motor-system electricity can be saved cost-effectively**, about 10% of all electricity demand ([IEA](https://iea.org/reports/energy-efficiency-policy-opportunities-for-electric-motor-driven-systems)). Compressed-air leaks alone can waste 20-30% of a compressor's output ([US DOE](https://www.energy.gov/sites/prod/files/2014/05/f16/compressed_air3.pdf)).
+- The savings are cheap and fast when found: in the US DOE audit database, **56% of 91,551 recommendations pay back in under a year**, yet only about 45-47% get implemented ([ITAC database](https://itac.university/payback)). And **75% of audit clients said they would not have sought an audit without the program**, citing missing service providers, time and budget ([SRI International, 2022](https://iac.university/file/technical/Industrial%20Assessment%20Centers%20Impact%202022%20SRI%20International.pdf)).
+- Illustrative arithmetic (not a forecast): saving 11-18% of the 7,740 TWh that motor systems use in industry would be **about 850-1,390 TWh a year**, roughly a third to a half of the EU's annual electricity use.
 
-**WattLoop turns the first-pass audit into something any plant can do in minutes**, with every number traceable and every fix tested before it is recommended.
+The gap is not knowledge, it is access: audits take weeks, cost money and need scarce experts, so most small and medium plants never get one. **WattLoop turns the first-pass audit into something any plant, anywhere, can do in minutes**, with every number traceable and every fix tested before it is recommended. It is built to work with any country's tariffs and grid emission factor (Egypt is our first test setting).
 
 ## Business value
 
 | For the plant owner | For the energy engineer or consultant | For the country |
 |---|---|---|
-| Know *where* energy is wasted and *what each fix is worth* before spending | Skip the blank-page work: arrive on site with a calibrated twin and a ranked plan | Lower industrial demand at peak, lower emissions |
+| Know *where* energy is wasted and *what each fix is worth* before spending | Skip the blank-page work: arrive on site with a calibrated twin and a ranked plan | Lower industrial demand and emissions, in any country |
 | Fixes ranked by payback: this week, this month, next quarter | Review, not rebuild: approve, modify or reject with a recorded note | Scales to thousands of small plants that cannot afford an audit today |
-| A report the bank, the board or the engineer can act on | A traceable evidence trail for every number | Built for Egyptian tariffs and conditions |
+| A report the bank, the board or the engineer can act on | A traceable evidence trail for every number | Local tariffs and grid factors are plain inputs |
 
-**How the value is calculated (no magic numbers):** `saving = kWh wasted x tariff`, per fix, from a physics model checked against published measurements. For the synthetic demo plant (72,700 kWh/month) the verified plan saves about **23,000 kWh/month, roughly 569,000 EGP/year**, with a stated range of about 514,000 to 660,000 EGP/year. The plant is synthetic and the equipment costs are placeholders that the report tells you to replace with supplier quotes.
+**How the value is calculated (no magic numbers):** `saving = kWh wasted x tariff`, per fix, from a physics model checked against published measurements. For the synthetic demo plant (72,700 kWh/month) the verified plan saves about **23,000 kWh/month, roughly 569,000 EGP/year** (the demo uses Egyptian tariffs; any currency works), with a stated range of about 514,000 to 660,000. The plant is synthetic and the equipment costs are placeholders that the report tells you to replace with supplier quotes.
 
 <p align="center"><img src="assets/screens/report1.jpg" alt="PDF report page 1" width="48%"> <img src="assets/screens/report2.jpg" alt="PDF report page 2: problems, cost, when to fix" width="48%"><br><sub><b>The deliverable.</b> A PDF with the 3D twin today and after the fixes, the problems with a technical explanation, what to fix, what it costs, when to fix it, money today versus after, risks and an engineer sign-off block.</sub></p>
 
