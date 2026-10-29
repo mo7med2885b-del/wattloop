@@ -118,11 +118,13 @@ PROVENANCE = [
     ("HVAC setpoint", "6 %/degC, band 4.5 to 10", "Roussac et al. 2011 (33 offices); other studies 8 to 16 %/degC", "PARTIAL (conservative end)"),
     ("Electricity tariff", "0.10 USD/kWh default", "About the US industrial average (EIA 9.64 cents/kWh, Aug 2026, preliminary); prices differ by country: set your own", "PARTIAL"),
     ("Grid emission factor", "0.45 kgCO2/kWh default", "Illustrative placeholder: set your grid factor", "UNVERIFIED"),
-    ("Solar yield", "5.0 kWh per kWp per day", "EU JRC PVGIS, Cairo 1,827 kWh/kWp/yr", "VERIFIED"),
-    ("Capex (drives, leak repair, LED, controls, PV)", "placeholder values", "No Egyptian source found", "UNVERIFIED"),
+    ("Solar yield", "5.0 kWh per kWp per day", "EU JRC PVGIS, Cairo 1,827 kWh/kWp/yr (an example site; set your own yield)", "VERIFIED"),
+    ("Capex (drives, leak repair, LED, controls, PV)", "placeholder values", "No supplier price source used: replace with quotes", "UNVERIFIED"),
+    ("Compressor leak default", "20% of capacity when the leak is unknown", "US DOE: leaks commonly 20-30% of compressor output; the bill cannot identify it", "PARTIAL"),
+    ("Solar cap", "array limited to 20% of the plant energy", "Design assumption: no roof data, no export credit", "UNVERIFIED"),
     ("Standby / off-hours loads", "user input", "No measured share found", "UNVERIFIED"),
 ]
-LIMITS = ["Component models are checked against published data from the US and Europe, not against a real Egyptian plant.",
+LIMITS = ["Component models are checked against published data from the US and Europe, not against a real plant. No real before/after plant data was found.",
           "27 comparisons come from 8 independent sources; one pump test supplies 12 of them.",
           "The pre-fit median error is the honest figure. The current constants were fitted on the same points, so their error is in-sample.",
           "Small-receiver load/unload compressors, variable-speed compressors, fans, chillers and heat recovery are not modelled.",
@@ -170,10 +172,17 @@ def holdout() -> dict | None:
     return {"rows": rows, **summary(rows), "sources": len({r["url"] for r in rows})} if rows else None
 
 
+def input_benchmark() -> dict:
+    """Synthetic test of how input quality changes the error of the predicted saving (random plants, known truth; NOT real plants)."""
+    from . import benchmark
+    return {"seeds": "1000-1199 (held out from development)", "results": benchmark.run(1000, 200),
+            "note": "200 random synthetic plants whose true saving is known. Shows how much the inputs matter, not field accuracy: on a real plant the error cannot go below the formula error above."}
+
+
 def run() -> dict:
     leg, cur = _rows("legacy"), _rows("current")
     return {"legacy": {"rows": leg, **summary(leg)}, "current": {"rows": cur, **summary(cur)},
-            "independent_sources": 8, "holdout": holdout(), "provenance": [dict(zip(("item", "value", "basis", "status"), p)) for p in PROVENANCE], "limits": LIMITS, "note": "Component models vs published data only. Not a field validation. 'current' constants were fitted on the same points (in-sample)."}
+            "independent_sources": 8, "holdout": holdout(), "input_benchmark": input_benchmark(), "provenance": [dict(zip(("item", "value", "basis", "status"), p)) for p in PROVENANCE], "limits": LIMITS, "note": "Component models vs published data only. Not a field validation. 'current' constants were fitted on the same points (in-sample)."}
 
 
 if __name__ == "__main__":

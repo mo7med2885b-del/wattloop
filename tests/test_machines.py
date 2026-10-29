@@ -50,3 +50,9 @@ def test_confidence_is_lower_when_ratings_are_guessed():
     sens = {"low": {"saved_egp_year": 900}, "high": {"saved_egp_year": 1100}}
     crit = {"challenges": []}
     assert pipeline.arbiter(0, ev, sens, crit, 0, "user")["confidence_score"] > pipeline.arbiter(0, ev, sens, crit, 0, "guessed")["confidence_score"]
+
+
+def test_input_benchmark_better_inputs_smaller_error():
+    from wattloop import benchmark
+    r = benchmark.run(1000, 40)
+    assert r["user_kw+facts"]["median"] < r["user_kw"]["median"] < r["bill_only"]["median"]
