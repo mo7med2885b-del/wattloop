@@ -16,6 +16,10 @@ Give WattLoop a photo (or a few sentences about the machines) and the monthly el
 
 ---
 
+## The engineer stays in charge
+
+WattLoop is built to **empower engineers, not replace them**. It does the slow first pass (reading the plant, building the twin, testing fixes) so the engineer arrives on site with a ranked, evidence-backed plan instead of a blank page. Every run ends at an engineer decision (approve, modify or reject, with a recorded note), and the final report depends on the engineer's view and analysis of the data. Faster, not unnecessary.
+
 ## Why this matters (a global problem)
 
 Industry is the biggest energy user on Earth, and most of its electricity is hidden in motors, pumps, fans and compressed air.

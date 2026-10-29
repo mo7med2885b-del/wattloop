@@ -262,27 +262,35 @@ const App = (() => {
   // ---------------------------------------------------------------- machine picker (the plant's chart)
   let machCat = [];
   const mdet = { hvac: ["setpoint °C (known?)", "setpoint_c"], lighting_t8: ["hours left on after closing", "after_hours_h"], lighting_t12: ["hours left on after closing", "after_hours_h"], lighting_hid: ["hours left on after closing", "after_hours_h"], lighting_led: ["hours left on after closing", "after_hours_h"] };
+  // pop-out picker with Muse Image thumbnails: choose the kind of machine by picture and name
+  function pickMachine(cb) {
+    const g = $("#mpGrid"); g.innerHTML = machCat.map((c) => `<button class="gi" data-k="${c.kind}" type="button"><img loading="lazy" src="/static/machines/${c.kind}.jpg" alt=""><span>${c.label}</span><small>typical ${c.kw} kW</small></button>`).join("");
+    g.querySelectorAll(".gi").forEach((b) => b.addEventListener("click", () => { $("#mpick").hidden = true; cb(b.dataset.k); }));
+    $("#mpick").hidden = false;
+  }
   function mRow(r) {
-    r = r || {}; const kind = r.kind || (machCat[0] && machCat[0].kind); const cat = machCat.find((c) => c.kind === kind) || {}; const d = document.createElement("div"); d.className = "mrow";
-    d.innerHTML = `<select class="mk">${machCat.map((c) => `<option value="${c.kind}">${c.label}</option>`).join("")}</select><input class="mn" type="number" min="1" max="50" value="${r.count || 1}" title="how many"><input class="mkw" type="number" min="0" step="any" title="kW each (nameplate)"><input class="mh" type="number" min="0" max="24" step="any" title="hours per day" placeholder="h/day"><button class="mdel" type="button" title="remove">×</button><input class="mx" type="number" step="any" hidden><select class="mc" hidden><option value="">compressor control: unknown</option><option value="modulating">modulating</option><option value="load_unload">load / unload</option></select>`;
+    r = r || {}; const kind = r.kind || (machCat[0] && machCat[0].kind); const d = document.createElement("div"); d.className = "mrow";
+    d.innerHTML = `<button class="mk" type="button" title="Change the machine type"><img alt=""><span></span></button><input class="mn" type="number" min="1" max="50" value="${r.count || 1}" title="how many"><input class="mkw" type="number" min="0" step="any" title="kW each (nameplate)"><input class="mh" type="number" min="0" max="24" step="any" title="hours per day" placeholder="h/day"><button class="mdel" type="button" title="remove">×</button><input class="mx" type="number" step="any" hidden><select class="mc" hidden><option value="">compressor control: unknown</option><option value="modulating">modulating</option><option value="load_unload">load / unload</option></select>`;
     const k = d.querySelector(".mk"), kw = d.querySelector(".mkw"), x = d.querySelector(".mx"), c = d.querySelector(".mc");
-    k.value = kind; d.dataset.name = r.name || ""; if (r.id) d.dataset.id = r.id;
-    const sync = (fresh) => { const cc = machCat.find((q) => q.kind === k.value) || {}; if (fresh) { kw.value = cc.kw; kw.dataset.src = "typical"; kw.classList.add("typ"); } const m = mdet[k.value]; x.hidden = !m; if (m) { x.placeholder = m[0]; x.dataset.f = m[1]; } c.hidden = k.value !== "compressor"; };
+    const show = () => { const cc = machCat.find((q) => q.kind === d.dataset.kind) || {}; k.querySelector("img").src = `/static/machines/${d.dataset.kind}.jpg`; k.querySelector("span").textContent = d.dataset.name || cc.label || ""; const m = mdet[d.dataset.kind]; x.hidden = !m; if (m) { x.placeholder = m[0]; x.dataset.f = m[1]; } c.hidden = d.dataset.kind !== "compressor"; };
+    d.dataset.kind = kind; d.dataset.name = r.name || ""; if (r.id) d.dataset.id = r.id;
+    const cat = machCat.find((q) => q.kind === kind) || {};
     kw.value = r.kw != null ? r.kw : cat.kw; kw.dataset.src = r.kw_source === "user" ? "user" : "typical"; kw.classList.toggle("typ", kw.dataset.src === "typical");
-    if (r.hours) d.querySelector(".mh").value = r.hours; sync(false);
+    if (r.hours) d.querySelector(".mh").value = r.hours; show();
     const f = mdet[kind]; if (f && r[f[1]] != null) x.value = r[f[1]]; if (r.control) c.value = r.control;
-    k.addEventListener("change", () => { d.dataset.name = ""; sync(true); }); kw.addEventListener("input", () => { kw.dataset.src = "user"; kw.classList.remove("typ"); }); d.querySelector(".mdel").addEventListener("click", () => d.remove());
+    k.addEventListener("click", () => pickMachine((nk) => { d.dataset.kind = nk; d.dataset.name = ""; const q = machCat.find((z) => z.kind === nk) || {}; kw.value = q.kw; kw.dataset.src = "typical"; kw.classList.add("typ"); show(); }));
+    kw.addEventListener("input", () => { kw.dataset.src = "user"; kw.classList.remove("typ"); }); d.querySelector(".mdel").addEventListener("click", () => d.remove());
     $("#mrows").appendChild(d);
   }
   function fillMachines(rows) { $("#mrows").innerHTML = ""; (rows || []).forEach(mRow); if (rows && rows.length) $("#mach").open = true; }
   function readMachines() {
     return [...document.querySelectorAll("#mrows .mrow")].map((d) => {
-      const kind = d.querySelector(".mk").value, o = { kind, count: +d.querySelector(".mn").value || 1, kw: +d.querySelector(".mkw").value, kw_source: d.querySelector(".mkw").dataset.src, name: d.dataset.name || undefined, id: d.dataset.id || undefined };
+      const kind = d.dataset.kind, o = { kind, count: +d.querySelector(".mn").value || 1, kw: +d.querySelector(".mkw").value, kw_source: d.querySelector(".mkw").dataset.src, name: d.dataset.name || undefined, id: d.dataset.id || undefined };
       const h = d.querySelector(".mh").value; if (h) o.hours = +h; const x = d.querySelector(".mx"); if (!x.hidden && x.value !== "") o[x.dataset.f] = +x.value; const c = d.querySelector(".mc"); if (!c.hidden && c.value) o.control = c.value;
       return o;
     }).filter((o) => o.kw > 0);
   }
-  async function loadMachines() { try { machCat = (await (await fetch("/api/machines")).json()).catalog; } catch (e) { machCat = []; } $("#madd").addEventListener("click", () => { if (machCat.length && document.querySelectorAll("#mrows .mrow").length < 12) mRow(); $("#mach").open = true; }); }
+  async function loadMachines() { try { machCat = (await (await fetch("/api/machines")).json()).catalog; } catch (e) { machCat = []; } $("#madd").addEventListener("click", () => { if (machCat.length && document.querySelectorAll("#mrows .mrow").length < 12) pickMachine((k) => { mRow({ kind: k }); $("#mach").open = true; }); }); $("#mpClose").addEventListener("click", () => { $("#mpick").hidden = true; }); $("#mpick").addEventListener("click", (e) => { if (e.target.id === "mpick") $("#mpick").hidden = true; }); }
   async function start() {
     if (running) { cancel(); return; }
     const bill = +$("#bill").value; if (!(bill > 0)) { imgStatus("bad", "Enter the monthly electricity bill in kWh."); return; }
