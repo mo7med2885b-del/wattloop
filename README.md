@@ -33,6 +33,8 @@ Industry is the biggest energy user on Earth, and most of its electricity is hid
 
 The gap is not knowledge, it is access: audits take weeks, cost money and need scarce experts, so most small and medium plants never get one. **WattLoop turns the first-pass audit into something any plant, anywhere, can do in minutes**, with every number traceable and every fix tested before it is recommended. It is built to work with any country's tariffs and grid emission factor (the tariff, currency and grid factor are plain inputs; the default is USD).
 
+<p align="center"><img src="assets/screens/inputs.jpg" alt="What WattLoop takes in: a photo or description, the monthly bill and an optional machine list, through the agent loop, to a verified plan the engineer decides on" width="100%"><br><sub><b>What goes in, what comes out.</b> A photo or a description, the monthly bill (required) and an optional machine list go through the agent loop; the engineer decides on the verified plan. Illustrations generated with Muse Image 1.0.</sub></p>
+
 ## Tell it your machines (optional, big accuracy gain)
 
 Pick the machines from a short list (pumps, compressors, fans, conveyors, mixers, lighting, air-conditioning, standby loads), then enter the **count, nameplate kW and hours per day**. Typical kW values are pre-filled in italics as placeholders to replace. Optional facts (HVAC setpoint, hours the lights stay on after closing, compressor control type) sharpen it further. The bill then becomes a **cross-check** instead of the only source of sizes; if your machines cannot explain the bill, the app adds a labelled "unlisted loads" block and lowers its confidence.
