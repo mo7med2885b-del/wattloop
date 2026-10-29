@@ -128,7 +128,7 @@ const App = (() => {
     const e = r.evaluation; S.result = r; S.hourA = e.hourly_before; S.hourB = e.hourly_after; S.partsA = e.parts_before; S.partsB = e.parts_after;
     $("#summary").textContent = r.summary; $("#critic").innerHTML = "<b>Critic:</b> " + (r.critic.challenges || []).slice(0, 2).map((c) => `<div>• ${String(c.concern).replace(/</g, "&lt;")} <span class="muted">(${c.severity})</span></div>`).join("");
     $("#egp").textContent = fmt(e.saved_egp_year); $("#pay").textContent = e.payback_months ?? "–"; $("#conf").textContent = r.arbiter.level; radar(r.arbiter.confidence_score);
-    const sl = r.solar; $("#solarnote").textContent = sl && sl.solar_egp_year > 0 ? `Without solar: ${fmt(sl.saved_egp_year_no_solar)} USD/yr (${fmt(sl.saved_kwh_month_no_solar)} kWh/month). Solar adds ${fmt(sl.solar_egp_year)} USD/yr, capped at 30% of the plant's energy.` : "";
+    const sl = r.solar; $("#solarnote").textContent = sl && sl.solar_egp_year > 0 ? `Without solar: ${fmt(sl.saved_egp_year_no_solar)} USD/yr (${fmt(sl.saved_kwh_month_no_solar)} kWh/month). Solar adds ${fmt(sl.solar_egp_year)} USD/yr, capped at 20% of the plant's energy.` : "";
     $("#basisnote").textContent = r.arbiter.data_basis_text ? "Confidence basis: " + r.arbiter.data_basis_text + (r.arbiter.unlisted_share > 0.03 ? `; ${Math.round(r.arbiter.unlisted_share * 100)}% of the bill is not explained by the listed machines.` : ".") : "";
   }
   function handle(ev) {

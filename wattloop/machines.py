@@ -79,6 +79,8 @@ def spec_from_machines(rows: list[dict], shift: dict, name: str = "Your facility
             if k in r and k in cat["extra"]:
                 c[k] = r[k]
         c["detail_known"] = [k for k in ("setpoint_c", "after_hours_h", "control", "vsd") if k in r and k in c]
+        if r.get("hours"):
+            c["hours_user"] = True   # hours the user gave are facts: calibration must not change them
         total = r["kw"] * r["count"]
         if t == "pump":
             c.update(count=r["count"], rated_kw=r["kw"], hours=hours)

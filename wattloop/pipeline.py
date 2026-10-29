@@ -29,6 +29,10 @@ KNOBS = {
 }
 
 
+# With a user machine list the bill cannot tell leak share, setpoint or after-hours use, so calibration may only tune how hard machines work.
+LOCKED_TUNABLE = ("flow_demand", "air_demand", "load_factor", "hours")
+
+
 # ---------------------------------------------------------------- run + events
 class Run:
     def __init__(self, case: dict, image: bytes | None):
@@ -232,7 +236,7 @@ def calibrate_loop(run: Run, spec: dict, bill: float):
                 for a in (r["json"] or {}).get("adjustments", [])[:4]:
                     c = next((c for c in spec["components"] if c["id"] == a.get("id")), None)
                     f = a.get("field")
-                    if c and f in KNOBS.get(c["type"], {}) and not (c.get("locked") and f in ("kw", "rated_kw", "count")):
+                    if c and f in KNOBS.get(c["type"], {}) and not (c.get("locked") and (f not in LOCKED_TUNABLE or (f == "hours" and c.get("hours_user")))):
                         lo, hi = KNOBS[c["type"]][f]
                         c[f] = min(hi, max(lo, float(a["value"])))
                         adjusted = True
