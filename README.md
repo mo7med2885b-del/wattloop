@@ -86,6 +86,8 @@ flowchart TD
 | Report Writer | Muse Spark | Write the engineer's brief | A validator rejects any number not in the verified result |
 | Engineer gate | Human | Approve, modify or reject, with a recorded note | The workflow cannot finish without it |
 
+<p align="center"><img src="assets/screens/workflow.jpg" alt="The agent workflow after a finished run" width="100%"><br><sub><b>The agent workflow, live.</b> Every node lights up from a real run event: models in orange-outlined cards, code-only steps marked "no model". The left panel shows the 3D plant as it is built. When the plan is verified, a decision card asks the engineer to approve, modify or reject.</sub></p>
+
 **Why it collaborates this way:** a model is good at reading a photo and proposing ideas, and bad at being the final judge of arithmetic. So models *propose*, code *disposes*. The agent workflow view animates this live, node by node, from real run events (nothing is canned).
 
 ## Meta tooling, used in depth
