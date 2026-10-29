@@ -193,8 +193,8 @@ const App = (() => {
 
   // ---------------------------------------------------------------- instant demo (pre-computed, no AI)
   async function demo() {
-    clearInterval(timer); hideLoader(); S.caseName = "Delta Foods (synthetic demo plant)"; const d = await (await fetch("/api/demo/instant")).json();
-    source = { type: "gallery", id: "demo" }; imgOk = true; setPhoto("/api/demo/image"); $("#desc").value = d.description; $("#bill").value = d.bill_kwh; $("#overlay").innerHTML = "";
+    clearInterval(timer); hideLoader(); const d = await (await fetch("/api/demo/instant?pick=random")).json(); S.caseName = d.title || "Delta Foods (synthetic demo plant)";
+    source = { type: "gallery", id: d.id || "demo" }; imgOk = true; setPhoto(d.file || "/api/demo/image"); $("#desc").value = d.description; $("#bill").value = d.bill_kwh; $("#overlay").innerHTML = "";
     renderBuild(d.spec, "pre-computed", true); renderBuild(d.result.spec_after, "after fixes · demo"); calSpec = d.spec; calib.twin = d.calibration; calib.bill = d.bill_kwh; drawCal(); $("#calnote").textContent = "Pre-computed demo: the twin already matches the bill."; $("#fixes tbody").innerHTML = ""; rej = 0;
     d.rounds.forEach((r, i) => fixRows(i + 1, r)); $("#alog").innerHTML = ""; alog("DEMO: pre-computed model, no AI call", "ok"); alog("Round 1 rejected 2 over-aggressive fixes", "bad"); alog("Round 2 verified the corrected plan", "ok");
     showResult(d.result); S.hourA = d.result.evaluation.hourly_before; S.hourB = d.result.evaluation.hourly_after; S.partsA = d.result.evaluation.parts_before; S.partsB = d.result.evaluation.parts_after;

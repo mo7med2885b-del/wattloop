@@ -161,10 +161,53 @@ def scene_review(req: ReviewReq):
     return out
 
 
-@app.get("/api/demo/instant")
-def demo_instant():
-    """Pre-computed demo twin: real twin code and real verifier, no model call. Round 1 is deliberately over-aggressive so the rejection shows."""
+def _random_demo(item: dict) -> dict:
     from wattloop import twin
+    import copy
+    spec = copy.deepcopy(item["spec"])
+    bill = next(g["bill_kwh"] for g in gallery_items() if g["id"] == item["id"])
+    first = twin.monthly_kwh(spec)
+    k = bill / max(1.0, first)
+    for c in spec["components"]:            # calibrate in code: scale ratings so the twin matches the bill
+        for f in ("kw", "rated_kw"):
+            if f in c:
+                c[f] = c[f] * k
+    comps = spec["components"]
+    ids = lambda t: [c["id"] for c in comps if c["type"] == t]
+    r1 = [{"type": "vsd_pump", "target": i} for i in ids("pump")] + [{"type": "repair_leaks", "target": i, "target_leak": 0.0} for i in ids("compressor")] +          [{"type": t, "target": i} for i in ids("lighting") for t in ("led_retrofit", "lighting_controls")] + [{"type": "hvac_setpoint", "target": i, "setpoint_c": 30} for i in ids("hvac")] +          [{"type": "standby_shutdown", "target": i} for i in ids("standby")] + [{"type": "solar_pv", "kwp": 600}]
+    r2 = [{"type": "repair_leaks", "target": i, "target_leak": 0.05} for i in ids("compressor")] + [{"type": "hvac_setpoint", "target": i, "setpoint_c": 24} for i in ids("hvac")] + [{"type": "solar_pv", "kwp": 30}]
+    accepted, rounds = [], []
+    for fixes in (r1, r2):
+        res = []
+        for f in fixes:
+            try:
+                ev = twin.evaluate(spec, accepted + [f]); solo = twin.evaluate(spec, [f])
+                ok = not ev["violations"] and solo["saved_kwh_month"] > 0
+                if ok:
+                    accepted.append(f)
+                res.append({"fix": f, "why": "", "status": "accepted" if ok else "rejected", "reason": "" if ok else "; ".join(ev["violations"]) or "no saving", "saved_egp_year": solo["saved_egp_year"], "saved_kwh_month": solo["saved_kwh_month"]})
+            except twin.FixError as e:
+                res.append({"fix": f, "why": "", "status": "rejected", "reason": str(e), "saved_egp_year": 0, "saved_kwh_month": 0})
+        rounds.append(res)
+    ev = twin.evaluate(spec, accepted); sens = twin.sensitivity(spec, accepted)
+    crit = {"challenges": [{"fix": "all", "concern": "Savings come from a model of the plant, not measurements. An engineer must verify on site.", "severity": "medium"}], "overall": "pre-computed demo"}
+    arb = pipeline.arbiter(0.0, ev, sens, crit, 0)
+    result = {"plan": accepted, "evaluation": {k2: v for k2, v in ev.items() if k2 != "spec"}, "sensitivity": sens, "critic": crit, "arbiter": arb,
+              "summary": f"Demo (pre-computed, no AI): {len(accepted)} verified fixes could save about {ev['saved_kwh_month']:.0f} kWh a month, around {ev['saved_egp_year']:,} USD a year. Simulated estimates; an engineer must verify them on site.",
+              "plan_detail": twin.plan_detail(spec, accepted), "params": {"tariff_egp_per_kwh": twin.PARAMS["tariff_egp_per_kwh"], "grid_kgco2_per_kwh": twin.PARAMS["grid_kgco2_per_kwh"]},
+              "calibration_err_pct": 0.0, "cost_usd": 0.0, "model_calls": 0, "spec_after": ev["spec"]}
+    return {"id": item["id"], "title": item["title"], "file": item["file"], "spec": spec, "description": "", "bill_kwh": bill, "calibration": [round(first), round(bill)], "rounds": rounds, "result": result}
+
+
+@app.get("/api/demo/instant")
+def demo_instant(pick: str | None = None):
+    """Pre-computed demo twin (pick=random: one of the 10 gallery plants, designed earlier by Muse Spark, calibrated and verified by code): real twin code and real verifier, no model call. Round 1 is deliberately over-aggressive so the rejection shows."""
+    from wattloop import twin
+    import copy, random
+    if pick == "random":
+        choice = random.choice(json.loads((Path(__file__).parent / "wattloop" / "data" / "demo_specs.json").read_text(encoding="utf-8")) + [None])   # None = the original Delta Foods demo
+        if choice:
+            return _random_demo(choice)
     spec = demo.TRUTH
     generic = pipeline.generic_spec({"start": 6, "end": 22, "days_per_week": 6})
     bill = demo.case()["bill_kwh"]
