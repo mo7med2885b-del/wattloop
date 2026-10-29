@@ -217,12 +217,42 @@ window.Factory = (function () {
   const TITLES = { pump: "PUMPS", compressor: "AIR COMPRESSOR", motors: "CONVEYORS", hvac: "COOLING", lighting: "LIGHTING", standby: "STANDBY", pv: "SOLAR PV" };
   const OFFS = { pump: [-10, -78], compressor: [30, -86], motors: [0, -90], hvac: [0, -56], lighting: [0, -30], standby: [0, -70], pv: [0, -30] };
   function buildCallouts(spec) {
-    calloutsEl.innerHTML = ""; leadersEl.innerHTML = ""; cos = {};
-    if (S.mode === "compare" || !spec) return;
+    calloutsEl.innerHTML = ""; leadersEl.innerHTML = ""; cos = {}; minis = [];
+    if (S.mode === "compare") { buildMinis(); return; }
+    if (!spec) return;
     spec.components.forEach((c) => {
       const d = document.createElement("div"); d.className = "co"; d.innerHTML = `<span class="tab">${TITLES[c.type] || c.type}</span><span class="sub"></span><div class="body"></div>`; calloutsEl.appendChild(d);
       d.addEventListener("click", (e) => { e.stopPropagation(); api.focus(S.focus === c.id ? null : c.id); });
       const ln = document.createElementNS("http://www.w3.org/2000/svg", "path"); ln.setAttribute("fill", "none"); ln.setAttribute("stroke-width", "1.2"); leadersEl.appendChild(ln); cos[c.id] = { d, ln, c };
+    });
+  }
+  // Compare view: one short tag per machine on each half (name, kW now, one-word status; the right half shows the change)
+  let minis = [];
+  const SHORT = { pump: ["valve throttled", "speed controlled"], compressor: ["air leaks", "leaks repaired"], hvac: ["over-cooled?", "setpoint raised"], lighting: ["left on", "LED + controls"], standby: ["left on", "auto off"], motors: ["", ""], pv: ["", "solar added"] };
+  function buildMinis() {
+    [[S.specA, 0], [S.specB, 1]].forEach(([spec, side]) => {
+      if (!spec) return;
+      spec.components.forEach((c) => {
+        if (side === 0 && c.type === "pv") return;
+        const d = document.createElement("div"); d.className = "co mini" + (side ? " fixed" : ""); d.innerHTML = `<div class="m1"><span class="tab">${TITLES[c.type] || c.type}</span><span class="sub"></span></div><span class="warn"></span>`; calloutsEl.appendChild(d); minis.push({ d, c, side });
+      });
+    });
+  }
+  function fillMinis(hour) {
+    const hi = Math.floor(hour) % 24;
+    minis.forEach(({ d, c, side }) => {
+      const kw = ((side ? S.partsB : S.partsA)[c.id] || [])[hi] ?? 0, k0 = ((S.partsA || {})[c.id] || [])[hi] ?? 0, wtxt = (SHORT[c.type] || ["", ""])[side];
+      let t = `${Math.abs(kw).toFixed(0)} kW`; if (side && c.type !== "pv" && k0 > 0.5 && kw < k0 - 0.05) t += ` ▼${Math.round((1 - kw / k0) * 100)}%`;
+      const bad = !side && wtxt && (c.type !== "lighting" || c.after_hours_h > 0) && (c.type !== "hvac" || c.setpoint_c < 23) && (c.type !== "standby" || c.kw > 0), good = side && (isFixed[c.type](c));
+      d.querySelector(".sub").textContent = t; const wn = d.querySelector(".warn"); wn.textContent = side ? (good ? wtxt : "") : (bad ? wtxt : ""); wn.style.display = wn.textContent ? "block" : "none";
+    });
+  }
+  function placeMinis(rect) {
+    const vw = rect.w / 2, rows = [[], []];
+    minis.slice().map((m) => { const w = m.side ? W.B : W.A, a = w && w.anchors[m.c.id]; if (!a) return null; tmp.copy(a).project(cam); return { m, x: m.side * vw + (tmp.x * .5 + .5) * vw, y: (-tmp.y * .5 + .5) * rect.h }; }).filter(Boolean).sort((p, q) => p.x - q.x).forEach((it) => {
+      const half = 52, rw = rows[it.m.side]; let r = 0, cx = Math.max(it.m.side * vw + half, Math.min((it.m.side + 1) * vw - half, it.x));
+      while (r < 4 && cx - half < (rw[r] ?? -1e9) + 6) r++;
+      rw[r] = cx + half; it.m.d.style.opacity = 1; it.m.d.style.left = cx + "px"; it.m.d.style.top = Math.max(34, it.y - 26 - r * 40) + "px";
     });
   }
   function fillCallouts(w, parts, hour) {
@@ -281,6 +311,7 @@ window.Factory = (function () {
       if (now - lastDom > 250) { fillCallouts(wv, parts, hour); lastDom = now; }
       placeCallouts(wv, { w, h }); leadersEl.setAttribute("viewBox", `0 0 ${w} ${h}`);
     }
+    if (S.mode === "compare") { if (now - lastDom > 250) { fillMinis(hour); lastDom = now; } placeMinis({ w, h }); leadersEl.setAttribute("viewBox", `0 0 ${w} ${h}`); }
     if (onFrame) onFrame({ hour, partsA: S.partsA, partsB: S.partsB, hourA: S.hourA, hourB: S.hourB, mode: S.mode, focus: S.focus });
   }
   let assemble = false, holdUntil = 0, pending = null, pendTimer = null;

@@ -204,3 +204,5 @@ button.primary.danger{background:var(--bad);color:#fff}
 
 .mrow .mk{display:flex;align-items:center;gap:5px;text-align:left;padding:2px 4px;min-width:0;background:var(--field);border:1px solid var(--line);color:var(--tx);cursor:pointer}.mrow .mk img{width:24px;height:24px;object-fit:cover;flex:none}.mrow .mk span{font-size:10.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #mpGrid .gi img{aspect-ratio:1/1}
+
+.co.mini{width:auto;min-width:0;white-space:nowrap}.co.mini .m1{display:flex}.co.mini .tab,.co.mini .sub{display:block;font-size:9.5px;padding:1px 6px}.co.mini .warn{margin-top:0;font-size:8.5px;padding:1px 6px;text-align:center}.co.mini .rows{display:none}
