@@ -8,7 +8,7 @@ from __future__ import annotations
 # kind -> twin type, label, typical kW (each), typical hours/day (None = whole shift), twin defaults
 CATALOG = {
     "pump": {"type": "pump", "label": "Pump (water, process, cooling)", "kw": 15.0, "hours": None, "extra": {"flow_demand": 0.8, "vsd": False, "static_share": 0.3}},
-    "compressor": {"type": "compressor", "label": "Air compressor", "kw": 37.0, "hours": None, "extra": {"air_demand": 0.6, "leak": 0.1, "control": "modulating"}},
+    "compressor": {"type": "compressor", "label": "Air compressor", "kw": 37.0, "hours": None, "extra": {"air_demand": 0.5, "leak": 0.2, "control": "modulating"}},
     "fan": {"type": "motors", "label": "Fan or blower", "kw": 15.0, "hours": None, "extra": {"load_factor": 0.7}},
     "conveyor": {"type": "motors", "label": "Conveyor", "kw": 5.5, "hours": None, "extra": {"load_factor": 0.6}},
     "mixer": {"type": "motors", "label": "Mixer or agitator", "kw": 22.0, "hours": None, "extra": {"load_factor": 0.7}},

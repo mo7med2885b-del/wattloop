@@ -53,6 +53,7 @@ const Report = (() => {
     para(`${result.summary}`, 9);
     const range = result.arbiter.range_egp_year;
     para(`Confidence: ${result.arbiter.level} (${result.arbiter.confidence_score}). Saving range with the evidence-based assumption sets: ${f0(range[0])} to ${f0(range[1])} USD per year. Avoided emissions about ${f1(e.co2_t_year)} tonnes CO2 per year (grid factor ${co2f} kg/kWh).`, 8.5, MUT);
+    if (result.arbiter.data_basis_text) para(`Confidence basis: ${result.arbiter.data_basis_text}.` + (result.solar && result.solar.solar_egp_year > 0 ? ` Without solar the saving is ${f0(result.solar.saved_egp_year_no_solar)} USD per year; solar adds ${f0(result.solar.solar_egp_year)} USD per year (capped at 20% of the plant energy).` : ""), 8.5, MUT);
     y += 1; h2("The facility and its digital twin");
     const iw = (W - 2 * M - 6) / 2, ih = iw * 0.58;
     if (photo) { const r = photo.h / photo.w; doc.addImage(photo.url, "JPEG", M, y, iw, Math.min(ih, iw * r)); }

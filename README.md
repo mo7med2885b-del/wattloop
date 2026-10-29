@@ -29,6 +29,14 @@ Industry is the biggest energy user on Earth, and most of its electricity is hid
 
 The gap is not knowledge, it is access: audits take weeks, cost money and need scarce experts, so most small and medium plants never get one. **WattLoop turns the first-pass audit into something any plant, anywhere, can do in minutes**, with every number traceable and every fix tested before it is recommended. It is built to work with any country's tariffs and grid emission factor (the tariff, currency and grid factor are plain inputs; the default is USD).
 
+## Tell it your machines (optional, big accuracy gain)
+
+Pick the machines from a short list (pumps, compressors, fans, conveyors, mixers, lighting, air-conditioning, standby loads), then enter the **count, nameplate kW and hours per day**. Typical kW values are pre-filled in italics as placeholders to replace. Optional facts (HVAC setpoint, hours the lights stay on after closing, compressor control type) sharpen it further. The bill then becomes a **cross-check** instead of the only source of sizes; if your machines cannot explain the bill, the app adds a labelled "unlisted loads" block and lowers its confidence.
+
+A synthetic test (200 random plants where the true saving is known, **not real plants**) shows how much the inputs matter, as the median error of the predicted saving: bill and photo only about 41%, machine list with typical kW about 23%, with the plant's own kW about 18%, with kW plus the facts above about **7.5%**. Reproduce: `python tools/benchmark_inputs.py 1000 200`. The compressor-leak default (20%) follows the US DOE's 20-30% range; the test plants draw leaks from 10-30%, so treat the numbers as a trend, not a promise.
+
+**Solar is shown apart.** Generation is not waste removal, so the result lists the saving *without* solar and what solar adds, with the array capped at 20% of the plant's energy.
+
 ## Business value
 
 | For the plant owner | For the energy engineer or consultant | For the country |
