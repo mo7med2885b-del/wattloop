@@ -128,6 +128,8 @@ const App = (() => {
     const e = r.evaluation; S.result = r; S.hourA = e.hourly_before; S.hourB = e.hourly_after; S.partsA = e.parts_before; S.partsB = e.parts_after;
     $("#summary").textContent = r.summary; $("#critic").innerHTML = "<b>Critic:</b> " + (r.critic.challenges || []).slice(0, 2).map((c) => `<div>• ${String(c.concern).replace(/</g, "&lt;")} <span class="muted">(${c.severity})</span></div>`).join("");
     $("#egp").textContent = fmt(e.saved_egp_year); $("#pay").textContent = e.payback_months ?? "–"; $("#conf").textContent = r.arbiter.level; radar(r.arbiter.confidence_score);
+    const sl = r.solar; $("#solarnote").textContent = sl && sl.solar_egp_year > 0 ? `Without solar: ${fmt(sl.saved_egp_year_no_solar)} USD/yr (${fmt(sl.saved_kwh_month_no_solar)} kWh/month). Solar adds ${fmt(sl.solar_egp_year)} USD/yr, capped at 30% of the plant's energy.` : "";
+    $("#basisnote").textContent = r.arbiter.data_basis_text ? "Confidence basis: " + r.arbiter.data_basis_text + (r.arbiter.unlisted_share > 0.03 ? `; ${Math.round(r.arbiter.unlisted_share * 100)}% of the bill is not explained by the listed machines.` : ".") : "";
   }
   function handle(ev) {
     WF.apply(ev);
@@ -194,7 +196,7 @@ const App = (() => {
   // ---------------------------------------------------------------- instant demo (pre-computed, no AI)
   async function demo() {
     clearInterval(timer); hideLoader(); const d = await (await fetch("/api/demo/instant?pick=random")).json(); S.caseName = d.title || "Delta Foods (synthetic demo plant)";
-    source = { type: "gallery", id: d.id || "demo" }; imgOk = true; setPhoto(d.file || "/api/demo/image"); $("#desc").value = d.description; $("#bill").value = d.bill_kwh; $("#overlay").innerHTML = "";
+    source = { type: "gallery", id: d.id || "demo" }; imgOk = true; setPhoto(d.file || "/api/demo/image"); $("#desc").value = d.description; $("#bill").value = d.bill_kwh; $("#overlay").innerHTML = ""; fillMachines(d.machines);
     renderBuild(d.spec, "pre-computed", true); renderBuild(d.result.spec_after, "after fixes · demo"); calSpec = d.spec; calib.twin = d.calibration; calib.bill = d.bill_kwh; drawCal(); $("#calnote").textContent = "Pre-computed demo: the twin already matches the bill."; $("#fixes tbody").innerHTML = ""; rej = 0;
     d.rounds.forEach((r, i) => fixRows(i + 1, r)); $("#alog").innerHTML = ""; alog("DEMO: pre-computed model, no AI call", "ok"); alog("Round 1 rejected 2 over-aggressive fixes", "bad"); alog("Round 2 verified the corrected plan", "ok");
     showResult(d.result); S.hourA = d.result.evaluation.hourly_before; S.hourB = d.result.evaluation.hourly_after; S.partsA = d.result.evaluation.parts_before; S.partsB = d.result.evaluation.parts_after;
@@ -207,6 +209,7 @@ const App = (() => {
   function setPhoto(src) { $("#photo").src = src; $("#overlay").innerHTML = ""; }
   async function pickGallery(item) {
     source = { type: "gallery", id: item.id }; upload = null; imgOk = true; setPhoto(item.file); imgStatus("ok", "Gallery image: " + item.title); $("#bill").value = item.bill_kwh; $("#gal").hidden = true;
+    try { fillMachines((await (await fetch("/api/machines/example?id=" + encodeURIComponent(item.id))).json()).machines); } catch (e) { /* the picker stays as it was */ }
     $("#desc").value = item.id === "demo" ? (await (await fetch("/api/demo/case")).json()).description : ""; caption("Image selected", item.title + ". Press Build the twin; the models read it live.");
   }
   function resizeToB64(file) {
@@ -256,6 +259,30 @@ const App = (() => {
     imgStatus("ok", "Describe the machines below (types, kW, how they run, problems you see). A model checks that it is a factory, then builds the twin from your words.");
     caption("Describe your plant", "Write the machines and how they run; then add the monthly bill and build.");
   }
+  // ---------------------------------------------------------------- machine picker (the plant's chart)
+  let machCat = [];
+  const mdet = { hvac: ["setpoint °C (known?)", "setpoint_c"], lighting_t8: ["hours left on after closing", "after_hours_h"], lighting_t12: ["hours left on after closing", "after_hours_h"], lighting_hid: ["hours left on after closing", "after_hours_h"], lighting_led: ["hours left on after closing", "after_hours_h"] };
+  function mRow(r) {
+    r = r || {}; const kind = r.kind || (machCat[0] && machCat[0].kind); const cat = machCat.find((c) => c.kind === kind) || {}; const d = document.createElement("div"); d.className = "mrow";
+    d.innerHTML = `<select class="mk">${machCat.map((c) => `<option value="${c.kind}">${c.label}</option>`).join("")}</select><input class="mn" type="number" min="1" max="50" value="${r.count || 1}" title="how many"><input class="mkw" type="number" min="0" step="any" title="kW each (nameplate)"><input class="mh" type="number" min="0" max="24" step="any" title="hours per day" placeholder="h/day"><button class="mdel" type="button" title="remove">×</button><input class="mx" type="number" step="any" hidden><select class="mc" hidden><option value="">compressor control: unknown</option><option value="modulating">modulating</option><option value="load_unload">load / unload</option></select>`;
+    const k = d.querySelector(".mk"), kw = d.querySelector(".mkw"), x = d.querySelector(".mx"), c = d.querySelector(".mc");
+    k.value = kind; d.dataset.name = r.name || ""; if (r.id) d.dataset.id = r.id;
+    const sync = (fresh) => { const cc = machCat.find((q) => q.kind === k.value) || {}; if (fresh) { kw.value = cc.kw; kw.dataset.src = "typical"; kw.classList.add("typ"); } const m = mdet[k.value]; x.hidden = !m; if (m) { x.placeholder = m[0]; x.dataset.f = m[1]; } c.hidden = k.value !== "compressor"; };
+    kw.value = r.kw != null ? r.kw : cat.kw; kw.dataset.src = r.kw_source === "user" ? "user" : "typical"; kw.classList.toggle("typ", kw.dataset.src === "typical");
+    if (r.hours) d.querySelector(".mh").value = r.hours; sync(false);
+    const f = mdet[kind]; if (f && r[f[1]] != null) x.value = r[f[1]]; if (r.control) c.value = r.control;
+    k.addEventListener("change", () => { d.dataset.name = ""; sync(true); }); kw.addEventListener("input", () => { kw.dataset.src = "user"; kw.classList.remove("typ"); }); d.querySelector(".mdel").addEventListener("click", () => d.remove());
+    $("#mrows").appendChild(d);
+  }
+  function fillMachines(rows) { $("#mrows").innerHTML = ""; (rows || []).forEach(mRow); if (rows && rows.length) $("#mach").open = true; }
+  function readMachines() {
+    return [...document.querySelectorAll("#mrows .mrow")].map((d) => {
+      const kind = d.querySelector(".mk").value, o = { kind, count: +d.querySelector(".mn").value || 1, kw: +d.querySelector(".mkw").value, kw_source: d.querySelector(".mkw").dataset.src, name: d.dataset.name || undefined, id: d.dataset.id || undefined };
+      const h = d.querySelector(".mh").value; if (h) o.hours = +h; const x = d.querySelector(".mx"); if (!x.hidden && x.value !== "") o[x.dataset.f] = +x.value; const c = d.querySelector(".mc"); if (!c.hidden && c.value) o.control = c.value;
+      return o;
+    }).filter((o) => o.kw > 0);
+  }
+  async function loadMachines() { try { machCat = (await (await fetch("/api/machines")).json()).catalog; } catch (e) { machCat = []; } $("#madd").addEventListener("click", () => { if (machCat.length && document.querySelectorAll("#mrows .mrow").length < 12) mRow(); $("#mach").open = true; }); }
   async function start() {
     if (running) { cancel(); return; }
     const bill = +$("#bill").value; if (!(bill > 0)) { imgStatus("bad", "Enter the monthly electricity bill in kWh."); return; }
@@ -263,6 +290,7 @@ const App = (() => {
     setRunning(true); since = 0; autoCompare = true; setMode("now"); resetForBuild();
     if (source.type === "text" && $("#desc").value.trim().length < 15) { imgStatus("bad", "Describe the machines in a sentence or two first."); return; }
     const body = source.type === "text" ? { description: $("#desc").value, bill_kwh: bill } : source.type === "gallery" ? { gallery_id: source.id, description: $("#desc").value, bill_kwh: bill } : { image_b64: upload, description: $("#desc").value, bill_kwh: bill };
+    const ms = readMachines(); if (ms.length) body.machines = ms;
     const r = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (!r.ok) { setRunning(false); let m = "Could not start."; try { m = (await r.json()).detail || m; } catch (e) { /* ignore */ } imgStatus("bad", m); return; }
     runId = (await r.json()).run_id; clearInterval(timer); timer = setInterval(poll, 500); poll();
@@ -320,6 +348,7 @@ const App = (() => {
     try { if (localStorage.getItem("wl-side-l") === "1") setSide("l", true); if (localStorage.getItem("wl-side-r") === "1") setSide("r", true); } catch (e) { /* ignore */ }
     $(".photo").addEventListener("click", openSeen); $("#seenClose").addEventListener("click", () => { $("#seen").hidden = true; }); $("#seen").addEventListener("click", (e) => { if (e.target.id === "seen") $("#seen").hidden = true; });
     $("#pdfBtn").addEventListener("click", () => Report.download({ result: S.result, specBefore: calSpec, billKwh: +$("#bill").value, caseName: (S.caseName || "Facility") }));
+    loadMachines();
     $("#evBtn").addEventListener("click", openEvidence); $("#evClose").addEventListener("click", () => { $("#ev").hidden = true; }); $("#ev").addEventListener("click", (e) => { if (e.target.id === "ev") $("#ev").hidden = true; });
     document.querySelectorAll(".speed button").forEach((b) => b.addEventListener("click", () => { Factory.setSpeed(+b.dataset.s); document.querySelectorAll(".speed button").forEach((x) => x.classList.toggle("on", x === b)); }));
     $("#run").addEventListener("click", start); $("#wfOpen").addEventListener("click", () => WF.open()); $("#demoBtn").addEventListener("click", demo); $("#overview").addEventListener("click", () => Factory.focus(null));

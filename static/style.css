@@ -196,3 +196,8 @@ button.primary.danger{background:var(--bad);color:#fff}
 .speed{display:inline-flex;border:1px solid var(--line2);margin-right:8px}.speed button{border:0;background:transparent;padding:3px 7px;font-size:11px;font-weight:700;color:var(--mut)}.speed button.on{background:var(--or);color:var(--btn-ink)}
 
 .pn.stat,.panel.stat,#stat{display:none!important}
+
+.mach{margin:7px 0;font-size:11px;color:var(--mut)}.mach summary{cursor:pointer;font-weight:700;color:var(--ink,inherit)}
+.mrow{display:grid;grid-template-columns:1fr 34px 46px 34px 14px;gap:3px;margin:4px 0;align-items:center}.mrow .mx{grid-column:1/5}.mrow select,.mrow input{min-width:0;width:100%;font-size:11px;padding:3px 4px}
+.mrow .mkw.typ{font-style:italic;opacity:.7}.mdel{background:none;border:0;color:var(--mut);cursor:pointer;font-size:14px;padding:0}
+.mbtn{margin:4px 0;background:none;border:1px dashed var(--mut);color:var(--mut);font-size:11px;padding:4px;width:100%;cursor:pointer}

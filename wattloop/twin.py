@@ -29,6 +29,7 @@ PARAMS = {
 }
 # LED power as a share of the old lamp, by baseline: PNNL-20404 (2011) T8 median of 0.649/0.597/0.772, T12 0.49; metal halide from rated watts only (PARTIAL)
 LED_BY_LEGACY = {"t8": 0.65, "t12": 0.49, "metal_halide": 0.32}
+PV_MAX_SHARE = 0.30   # ASSUMPTION: solar may not cover more than 30% of the plant's monthly energy (no roof data, no export credit)
 COMPRESSOR_CURVES = {"modulating": (0.70, 0.30), "load_unload": (0.25, 0.75)}  # power share at zero / extra at full load (CAC fact sheet 6; Fluid Power World 2018)
 # sensitivity sets: low / base / high savings. HVAC band 4.5% / 6% / 10% per degC; LED +-; pump static share +-0.2; leak slope 0.75 / 1 / 1
 SENSITIVITY = {"low": {"hvac_pct_per_c": 0.045, "led_scale": 1.15, "static_shift": 0.2, "leak_slope": 0.75},
@@ -232,6 +233,9 @@ def check_service(before: dict, after: dict) -> list[str]:
         if t == "compressor" and c["leak"] < 0.03:
             bad.append(f"{c['id']}: a leak share below 3% is not achievable in practice (ASSUMPTION floor)")
         if t == "pv":
+            share = c["kwp"] * PARAMS["pv_kwh_per_kwp_day"] * before["shift"]["days_per_week"] * DAYS_PER_MONTH / max(1.0, monthly_kwh(before))
+            if share > PV_MAX_SHARE:
+                bad.append(f"{c['id']}: {c['kwp']:.0f} kWp would cover {share:.0%} of the plant's energy; solar is capped at {PV_MAX_SHARE:.0%} (ASSUMPTION: roof area and export rules unknown)")
             day = [v for h, v in enumerate(hourly_kw(before)) if 8 <= h < 16 and v > 0]
             peak = c["kwp"] * PARAMS["pv_kwh_per_kwp_day"] / 12.0
             if day and peak > 0.8 * min(day):
@@ -286,6 +290,14 @@ def sensitivity(spec: dict, fixes: list[dict]) -> dict:
         r = evaluate(spec, fixes, prm)
         out[name] = {"saved_egp_year": r["saved_egp_year"], "saved_kwh_month": r["saved_kwh_month"]}
     return out
+
+
+def solar_split(spec: dict, plan: list[dict]) -> dict:
+    """Show the solar share of the saving apart from the efficiency fixes (solar is generation, not waste removal)."""
+    full = evaluate(spec, plan)
+    rest = evaluate(spec, [f for f in plan if f.get("type") != "solar_pv"])
+    return {"saved_kwh_month_no_solar": rest["saved_kwh_month"], "saved_egp_year_no_solar": rest["saved_egp_year"],
+            "solar_kwh_month": round(full["saved_kwh_month"] - rest["saved_kwh_month"], 1), "solar_egp_year": full["saved_egp_year"] - rest["saved_egp_year"]}
 
 
 def plan_detail(spec: dict, plan: list[dict]) -> list[dict]:

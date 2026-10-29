@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from wattloop import demo, meta, pipeline, scene
+from wattloop import demo, machines, meta, pipeline, scene
 
 app = FastAPI(title="WattLoop")
 RUNS: dict[str, pipeline.Run] = {}
@@ -24,6 +24,7 @@ class RunReq(BaseModel):
     image_b64: str | None = None
     gallery_id: str | None = None
     use_demo: bool = False
+    machines: list[dict] | None = None
 
 
 MAX_UPLOAD = 12 * 1024 * 1024
@@ -93,6 +94,31 @@ def demo_image():
 def demo_case():
     c = demo.case()
     return {"description": c["description"], "bill_kwh": c["bill_kwh"], "shift": {"start": 6, "end": 22, "days_per_week": 6}, "meta_live": meta.available()}
+
+
+@app.get("/api/machines")
+def machine_catalog():
+    return {"catalog": machines.catalog(), "max": machines.MAX_MACHINES}
+
+
+@app.get("/api/machines/example")
+def machine_example(id: str = "demo"):
+    """The machine list of a gallery plant (synthetic data), so the picker can be filled with names, counts and kW."""
+    import copy
+    from wattloop import twin
+    if id == "demo":
+        return {"machines": machines.from_spec(demo.TRUTH), "synthetic": True}
+    for item in json.loads((Path(__file__).parent / "wattloop" / "data" / "demo_specs.json").read_text(encoding="utf-8")):
+        if item["id"] == id:
+            spec = copy.deepcopy(item["spec"])
+            bill = next(g["bill_kwh"] for g in gallery_items() if g["id"] == id)
+            k = bill / max(1.0, twin.monthly_kwh(spec))
+            for c in spec["components"]:
+                for f in ("kw", "rated_kw"):
+                    if f in c:
+                        c[f] *= k
+            return {"machines": machines.from_spec(spec), "synthetic": True}
+    return {"machines": [], "synthetic": True}
 
 
 @app.get("/api/demo/preview")
@@ -191,12 +217,12 @@ def _random_demo(item: dict) -> dict:
         rounds.append(res)
     ev = twin.evaluate(spec, accepted); sens = twin.sensitivity(spec, accepted)
     crit = {"challenges": [{"fix": "all", "concern": "Savings come from a model of the plant, not measurements. An engineer must verify on site.", "severity": "medium"}], "overall": "pre-computed demo"}
-    arb = pipeline.arbiter(0.0, ev, sens, crit, 0)
+    arb = pipeline.arbiter(0.0, ev, sens, crit, 0, "user")
     result = {"plan": accepted, "evaluation": {k2: v for k2, v in ev.items() if k2 != "spec"}, "sensitivity": sens, "critic": crit, "arbiter": arb,
               "summary": f"Demo (pre-computed, no AI): {len(accepted)} verified fixes could save about {ev['saved_kwh_month']:.0f} kWh a month, around {ev['saved_egp_year']:,} USD a year. Simulated estimates; an engineer must verify them on site.",
-              "plan_detail": twin.plan_detail(spec, accepted), "params": {"tariff_egp_per_kwh": twin.PARAMS["tariff_egp_per_kwh"], "grid_kgco2_per_kwh": twin.PARAMS["grid_kgco2_per_kwh"]},
+              "plan_detail": twin.plan_detail(spec, accepted), "solar": twin.solar_split(spec, accepted), "params": {"tariff_egp_per_kwh": twin.PARAMS["tariff_egp_per_kwh"], "grid_kgco2_per_kwh": twin.PARAMS["grid_kgco2_per_kwh"]},
               "calibration_err_pct": 0.0, "cost_usd": 0.0, "model_calls": 0, "spec_after": ev["spec"]}
-    return {"id": item["id"], "title": item["title"], "file": item["file"], "spec": spec, "description": "", "bill_kwh": bill, "calibration": [round(first), round(bill)], "rounds": rounds, "result": result}
+    return {"id": item["id"], "title": item["title"], "file": item["file"], "spec": spec, "machines": machines.from_spec(spec), "description": "", "bill_kwh": bill, "calibration": [round(first), round(bill)], "rounds": rounds, "result": result}
 
 
 @app.get("/api/demo/instant")
@@ -231,12 +257,12 @@ def demo_instant(pick: str | None = None):
     ev = twin.evaluate(spec, accepted)
     sens = twin.sensitivity(spec, accepted)
     crit = {"challenges": [{"fix": "all", "concern": "Savings come from a model of the plant, not measurements. An engineer must verify on site.", "severity": "medium"}], "overall": "pre-computed demo"}
-    arb = pipeline.arbiter(0.0, ev, sens, crit, 0)
+    arb = pipeline.arbiter(0.0, ev, sens, crit, 0, "user")
     result = {"plan": accepted, "evaluation": {k: v for k, v in ev.items() if k != "spec"}, "sensitivity": sens, "critic": crit, "arbiter": arb,
               "summary": f"Demo (pre-computed, no AI): the twin suggests {len(accepted)} verified fixes could save about {ev['saved_kwh_month']:.0f} kWh a month, around {ev['saved_egp_year']:,} USD a year. These are simulated estimates; an engineer must verify them on site.",
-              "plan_detail": twin.plan_detail(spec, accepted), "params": {"tariff_egp_per_kwh": twin.PARAMS["tariff_egp_per_kwh"], "grid_kgco2_per_kwh": twin.PARAMS["grid_kgco2_per_kwh"]},
+              "plan_detail": twin.plan_detail(spec, accepted), "solar": twin.solar_split(spec, accepted), "params": {"tariff_egp_per_kwh": twin.PARAMS["tariff_egp_per_kwh"], "grid_kgco2_per_kwh": twin.PARAMS["grid_kgco2_per_kwh"]},
               "calibration_err_pct": 0.0, "cost_usd": 0.0, "model_calls": 0, "spec_after": ev["spec"]}
-    return {"spec": spec, "description": demo.DESCRIPTION, "bill_kwh": bill, "calibration": [round(twin.monthly_kwh(generic)), round(twin.monthly_kwh(spec))], "rounds": rounds, "result": result}
+    return {"spec": spec, "machines": machines.from_spec(spec), "description": demo.DESCRIPTION, "bill_kwh": bill, "calibration": [round(twin.monthly_kwh(generic)), round(twin.monthly_kwh(spec))], "rounds": rounds, "result": result}
 
 
 @app.post("/api/run")
@@ -262,6 +288,9 @@ def start(req: RunReq):
         if not image and not (req.description or "").strip():
             raise HTTPException(400, "add a photo or a description")
         case.update(description=(req.description or "")[:2000], bill_kwh=req.bill_kwh, name="Your facility")
+    rows = machines.clean(req.machines)
+    if rows:
+        case["machines"] = rows
     active = [r for r in RUNS.values() if not r.finished and not r.closed]
     if len(active) >= 2:
         raise HTTPException(429, "Two runs are already active. Cancel one or wait for it to finish.")

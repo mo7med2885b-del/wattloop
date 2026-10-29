@@ -12,7 +12,7 @@ import threading
 import time
 import uuid
 
-from . import designer, meta, twin
+from . import designer, machines, meta, twin
 
 NODES = ["intake", "scene", "vision", "segment", "engineer", "calibrate", "hunt", "verify", "critic", "report", "gate"]
 SYSTEM_COMMON = ("You are one agent in an industrial energy-audit pipeline for Egyptian facilities. "
@@ -20,11 +20,11 @@ SYSTEM_COMMON = ("You are one agent in an industrial energy-audit pipeline for E
                  "Answer with a single JSON object and nothing else.")
 
 KNOBS = {
-    "pump": {"hours": (1, 24), "flow_demand": (0.3, 1.0), "rated_kw": (1, 200), "count": (1, 8)},
-    "compressor": {"hours": (1, 24), "air_demand": (0.1, 1.0), "leak": (0.0, 0.5), "rated_kw": (5, 250)},
-    "lighting": {"hours": (1, 24), "after_hours_h": (0, 8), "kw": (0.5, 100)},
-    "hvac": {"hours": (1, 24), "kw": (2, 300)},
-    "motors": {"hours": (1, 24), "load_factor": (0.2, 1.0), "kw": (2, 300)},
+    "pump": {"hours": (1, 24), "flow_demand": (0.3, 1.0), "rated_kw": (1, 2000), "count": (1, 20)},
+    "compressor": {"hours": (1, 24), "air_demand": (0.1, 1.0), "leak": (0.0, 0.5), "rated_kw": (5, 2000)},
+    "lighting": {"hours": (1, 24), "after_hours_h": (0, 8), "kw": (0.5, 1000)},
+    "hvac": {"hours": (1, 24), "kw": (2, 3000)},
+    "motors": {"hours": (1, 24), "load_factor": (0.2, 1.0), "kw": (2, 3000)},
     "standby": {"kw": (0, 40)},
 }
 
@@ -184,6 +184,9 @@ def segmenter(run: Run, obs: dict):
 
 def twin_engineer(run: Run, obs: dict):
     shift = run.case["shift"]
+    if run.case.get("machines"):   # the user's own machine list is the chart: no guessing of ratings
+        spec = machines.spec_from_machines(run.case["machines"], shift, run.case.get("name", "Your facility"))
+        return {"spec": spec}, {"fallback": False, "note": f"built from the user's machine list ({len(spec['components'])} machines)"}
     sysm = SYSTEM_COMMON + (' Build a first-guess energy twin. Schema: {"components":[{"id":str,"type":"pump|compressor|lighting|hvac|motors|standby",'
                             '"name":str,"count":int,"rated_kw":number,"kw":number,"hours":number,"flow_demand":0.3-1,"air_demand":0.1-1,"leak":0-0.5,'
                             '"after_hours_h":0-8,"setpoint_c":number,"load_factor":0.2-1,"static_share":0-1 (pump: share of head that is static lift),"control":"modulating|load_unload" (compressor),"legacy":"t8|t12|metal_halide" (lighting)}]}. Use only fields that fit each type. '
@@ -218,7 +221,7 @@ def calibrate_loop(run: Run, spec: dict, bill: float):
         if it == 5:
             break
         adjusted = False
-        if meta.available() and it <= 4:
+        if meta.available() and it <= (3 if any(c.get('locked') for c in spec['components']) else 4):
             try:
                 bd = twin.breakdown_kwh(spec)
                 sysm = SYSTEM_COMMON + ' Return {"adjustments":[{"id":str,"field":str,"value":number,"why":str}]}. Change at most 4 parameters. Allowed fields per type: ' + json.dumps({k: list(v) for k, v in KNOBS.items()})
@@ -229,7 +232,7 @@ def calibrate_loop(run: Run, spec: dict, bill: float):
                 for a in (r["json"] or {}).get("adjustments", [])[:4]:
                     c = next((c for c in spec["components"] if c["id"] == a.get("id")), None)
                     f = a.get("field")
-                    if c and f in KNOBS.get(c["type"], {}):
+                    if c and f in KNOBS.get(c["type"], {}) and not (c.get("locked") and f in ("kw", "rated_kw", "count")):
                         lo, hi = KNOBS[c["type"]][f]
                         c[f] = min(hi, max(lo, float(a["value"])))
                         adjusted = True
@@ -238,12 +241,16 @@ def calibrate_loop(run: Run, spec: dict, bill: float):
                 adjusted = False
         if not adjusted:  # deterministic fallback: scale every power knob uniformly
             fallback = True
-            k = bill / max(1.0, kwh)
-            for c in spec["components"]:
-                for f in ("kw", "rated_kw"):
-                    if f in c:
-                        c[f] = c[f] * k
-            run.emit("note", node="calibrate", text=f"fallback: scaled all power ratings by {k:.2f}")
+            if any(c.get("locked") for c in spec["components"]):   # keep the user's nameplate kW; tune how hard each machine works
+                extra = machines.tune_utilisation(spec, bill, twin.monthly_kwh)
+                run.emit("note", node="calibrate", text="kept your machine ratings, tuned utilisation (flow, air demand, load)" + (f"; {extra:.0f} kW of unlisted load added to reach the bill" if extra else ""))
+            else:
+                k = bill / max(1.0, kwh)
+                for c in spec["components"]:
+                    for f in ("kw", "rated_kw"):
+                        if f in c:
+                            c[f] = c[f] * k
+                run.emit("note", node="calibrate", text=f"fallback: scaled all power ratings by {k:.2f}")
     run.cost += usd
     run.emit("node_done", node="calibrate", ms=int((time.time() - t0) * 1000), usd=round(usd, 5), model=model, fallback=fallback, calls=calls,
              output={"final_err_pct": round(err, 1), "calibrated": abs(err) <= 5, "spec": spec})
@@ -350,7 +357,10 @@ def critic_fallback(plan):
             "overall": "stand-in critique"}, {"fallback": True, "note": "deterministic stand-in"}
 
 
-def arbiter(err_pct: float, ev: dict, sens: dict, crit: dict, fallbacks: int) -> dict:
+BASIS_TEXT = {"user": "Ratings typed by the user", "typical": "Typical ratings from the catalog (replace with yours)", "guessed": "Ratings guessed from the bill and photo"}
+
+
+def arbiter(err_pct: float, ev: dict, sens: dict, crit: dict, fallbacks: int, basis: str = "guessed", unlisted_share: float = 0.0) -> dict:
     """Code decides confidence from deterministic signals; the model's opinion only lowers it."""
     score = 100
     score -= min(30, abs(err_pct) * 3)
@@ -358,10 +368,13 @@ def arbiter(err_pct: float, ev: dict, sens: dict, crit: dict, fallbacks: int) ->
     score -= min(25, spread * 100)
     score -= 5 * sum(1 for c in crit.get("challenges", []) if c.get("severity") == "high")
     score -= 4 * fallbacks
+    score -= {"user": 0, "typical": 8, "guessed": 15}.get(basis, 15)   # what the ratings are based on matters most
+    score -= min(15, unlisted_share * 40)
     score = max(5, round(score))
     level = "HIGH" if score >= 75 else "MEDIUM" if score >= 50 else "LOW"
     return {"confidence_score": score, "level": level, "range_egp_year": [sens["low"]["saved_egp_year"], sens["high"]["saved_egp_year"]],
-            "route": "engineer_review" if level != "LOW" else "escalate_site_audit_first"}
+            "route": "engineer_review" if level != "LOW" else "escalate_site_audit_first",
+            "data_basis": basis, "data_basis_text": BASIS_TEXT.get(basis, ""), "unlisted_share": round(unlisted_share, 3)}
 
 
 NUM = re.compile(r"\d[\d,\.]*")
@@ -509,10 +522,12 @@ def _execute(run: Run):
     sens = twin.sensitivity(spec, plan)
     crit = run.step("critic", lambda: _safe(lambda: critic(run, spec, plan, ev, sens), lambda: critic_fallback(plan)), "Try to refute the savings")
     fb = sum(1 for x in run.events if x["type"] == "node_done" and x.get("fallback"))
-    arb = arbiter(err, ev, sens, crit, fb)
+    unl = next((c for c in spec["components"] if c["id"] == "unlisted"), None)
+    unlisted_share = (twin.breakdown_kwh(spec).get("unlisted", 0.0) / max(1.0, case["bill_kwh"])) if unl else 0.0
+    arb = arbiter(err, ev, sens, crit, fb, machines.basis(spec), unlisted_share)
     rep = run.step("report", lambda: report_writer(run, ev, plan, arb, crit), "Write the engineer brief")
     run.result = {"plan": plan, "evaluation": {k: v for k, v in ev.items() if k != "spec"}, "sensitivity": sens, "critic": crit, "arbiter": arb,
-                  "summary": rep["summary"], "plan_detail": twin.plan_detail(spec, plan), "params": {"tariff_egp_per_kwh": twin.PARAMS["tariff_egp_per_kwh"], "grid_kgco2_per_kwh": twin.PARAMS["grid_kgco2_per_kwh"]}, "calibration_err_pct": err, "cost_usd": round(run.cost, 4), "model_calls": run.calls, "spec_after": ev["spec"]}
+                  "summary": rep["summary"], "plan_detail": twin.plan_detail(spec, plan), "solar": twin.solar_split(spec, plan), "params": {"tariff_egp_per_kwh": twin.PARAMS["tariff_egp_per_kwh"], "grid_kgco2_per_kwh": twin.PARAMS["grid_kgco2_per_kwh"]}, "calibration_err_pct": err, "cost_usd": round(run.cost, 4), "model_calls": run.calls, "spec_after": ev["spec"]}
     run.emit("gate", state="REQUIRES ENGINEER REVIEW", result=run.result)
     run.emit("done", cost_usd=round(run.cost, 4), calls=run.calls, seconds=round(time.time() - run.t0, 1))
 

@@ -28,6 +28,7 @@
           <div id="imgstatus" class="imgstatus" hidden></div>
           <label>Description <span class="sub">(optional)</span><textarea id="desc" rows="4" autocomplete="off" placeholder="What do you know about the plant? Equipment, shifts, problems you hear or see."></textarea></label>
           <label>Monthly bill (kWh)<input id="bill" type="number" inputmode="numeric" autocomplete="off"></label>
+          <details class="mach" id="mach"><summary>Machines <span class="sub">(optional: better accuracy)</span></summary><div id="mrows"></div><button type="button" id="madd" class="mbtn">+ Add machine</button><div class="muted small" id="mnote">Italic kW = typical value, replace with yours (nameplate). The bill is then only a cross-check.</div></details>
           <button id="run" class="primary">Build the twin</button>
         </div></section>
       <section class="pn" id="buildpn"><div class="hd">TWIN BUILD <span id="buildStage" class="bstage">waiting</span><i class="ci"></i></div><div class="pb"><div id="build" class="build"><div class="muted small">The twin is built here, machine by machine, as the models write it.</div></div></div></section>
@@ -74,7 +75,7 @@
     <div class="gauges pn"><div class="hd2">Waste gauges</div><div class="gg4" id="gauges"></div></div>
     <div class="bars pn"><div class="hd2">Load by hour <span class="legend"><i class="d b"></i>now <i class="d a"></i>after fixes</span></div><svg id="bars" viewBox="0 0 300 100" preserveAspectRatio="none"></svg></div>
     <div class="cmp pn"><div class="hd2">Energy by machine <small>kWh / month</small></div><table class="tbl2" id="cmp"><tbody></tbody></table>
-      <div class="cost"><div><b id="egp">–</b><span>USD saved / year</span></div><div><b id="pay">–</b><span>payback (months)</span></div><div><b id="conf">–</b><span>confidence</span></div></div></div>
+      <div class="cost"><div><b id="egp">–</b><span>USD saved / year</span></div><div><b id="pay">–</b><span>payback (months)</span></div><div><b id="conf">–</b><span>confidence</span></div></div><div class="muted small" id="solarnote"></div><div class="muted small" id="basisnote"></div></div>
   </section>
 </div>
 
