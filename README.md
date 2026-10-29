@@ -99,7 +99,6 @@ flowchart TD
 
 ## Trust: guards and evidence
 
-- **Honest numbers.** The twin's component formulas were checked against **27 published measurements from 8 independent sources** (a pump test, compressed-air fact sheets and a case study, lamp measurements, office cooling studies). Before any fitting: median error **13.6%**, mean 17.6%, worst case 62.5% (cooling-setpoint savings, which we understate). This is a check on published component data, **not a field validation of a plant**, and the Evidence panel says so. Every data point is listed with its source link. Reproduce: `python -m wattloop.validation`.
 - **No runaway API use.** Per-run call and time caps, a global per-minute cap, daily call and spend caps, a kill switch, hard loop limits, at most two active runs, and a cancel button that stops new model calls. Covered by tests (`python -m pytest tests -q`).
 - **Human in the loop.** Every result ends at an engineer decision card with the numbers, the fixes, what to check on site, and a required note for Modify or Reject.
 - **Safe geometry.** Models never write free-form 3D: only validated primitives inside bounds are drawn.
