@@ -189,3 +189,6 @@ button.primary.danger{background:var(--bad);color:#fff}
 .seenlist{max-height:60vh;overflow:auto;display:grid;gap:6px;align-content:start}.sitem{border:1px solid var(--line);background:var(--field);padding:7px 9px;cursor:pointer;font-size:12px;transition:border-color .15s}.sitem:hover,.sitem.on{border-color:var(--or)}
 .sitem b{display:block;font-size:12.5px}.sitem span{color:var(--mut)}.sitem em{font-style:normal;color:var(--or2);font-weight:700}.seenlist h4{margin:6px 0 0;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
 @media(max-width:900px){.seen{grid-template-columns:1fr}}
+
+.vg{color:var(--tx)}.vgv{color:var(--tx)}.vgn{color:var(--or)}.vgbar{border-color:var(--line2)}.vgbar em{background:var(--tx)}.overview{background:var(--pn);color:var(--tx)}
+.hint,.timeline{color:var(--mut)}
