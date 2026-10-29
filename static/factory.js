@@ -312,7 +312,7 @@ window.Factory = (function () {
       api.setSpecsNow(...args);
     },
     setSpecsNow(a, b, pa, pb, ha, hb) { S.specA = a; S.specB = b || a; S.partsA = pa || S.partsA; S.partsB = pb || pa || S.partsB; S.hourA = ha || S.hourA; S.hourB = hb || ha || S.hourB; rebuild(); },
-    expectAssemble() { assemble = true; }, setTheme(light) { LIGHT = !!light; rebuild(); }, setMode(m) { S.mode = m; rebuild(); }, togglePause() { S.paused = !S.paused; return S.paused; },
+    expectAssemble() { assemble = true; }, setTheme(light) { LIGHT = !!light; rebuild(); }, setMode(m) { S.mode = m; rebuild(); }, togglePause() { S.paused = !S.paused; return S.paused; }, setSpeed(x) { DAY = 36 / x; },
     focus(id) {
       S.focus = id; const w = S.mode === "after" ? W.B : W.A;
       const to = id && w && w.anchors[id] ? { tx: w.anchors[id].x, ty: Math.min(2.5, w.anchors[id].y * .6), tz: w.anchors[id].z, dist: 15, el: .42 } : { tx: 0, ty: 1.2, tz: 0, dist: 46, el: .5 };

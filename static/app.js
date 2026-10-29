@@ -321,6 +321,7 @@ const App = (() => {
     $(".photo").addEventListener("click", openSeen); $("#seenClose").addEventListener("click", () => { $("#seen").hidden = true; }); $("#seen").addEventListener("click", (e) => { if (e.target.id === "seen") $("#seen").hidden = true; });
     $("#pdfBtn").addEventListener("click", () => Report.download({ result: S.result, specBefore: calSpec, billKwh: +$("#bill").value, caseName: (S.caseName || "Facility") }));
     $("#evBtn").addEventListener("click", openEvidence); $("#evClose").addEventListener("click", () => { $("#ev").hidden = true; }); $("#ev").addEventListener("click", (e) => { if (e.target.id === "ev") $("#ev").hidden = true; });
+    document.querySelectorAll(".speed button").forEach((b) => b.addEventListener("click", () => { Factory.setSpeed(+b.dataset.s); document.querySelectorAll(".speed button").forEach((x) => x.classList.toggle("on", x === b)); }));
     $("#run").addEventListener("click", start); $("#wfOpen").addEventListener("click", () => WF.open()); $("#demoBtn").addEventListener("click", demo); $("#overview").addEventListener("click", () => Factory.focus(null));
     $("#pick").addEventListener("click", (e) => { e.stopPropagation(); $("#pickMenu").hidden = !$("#pickMenu").hidden; });
     document.addEventListener("click", () => { $("#pickMenu").hidden = true; });
