@@ -10,7 +10,7 @@ Give WattLoop a photo (or a few sentences about the machines) and the monthly el
 
 ## Hackathon track
 
-**Meta Global AI Developer Hackathon, Indie Developer track.** Themes: **Push the Frontier** (software that reasons about physical systems and energy) and **Build for Your World** (any plant, any country's tariff).
+**Meta Global AI Developer Hackathon, Indie Developer track.** Theme: **Push the Frontier**: software agents that reason about physical systems and energy.
 
 **Why it fits:** Meta models do the reading, designing, proposing and critiquing in a loop; a code simulator checks every number; and an engineer decides. It is an agent system that acts on the physical world, not a chatbot.
 
