@@ -190,7 +190,7 @@ def demo_instant():
     crit = {"challenges": [{"fix": "all", "concern": "Savings come from a model of the plant, not measurements. An engineer must verify on site.", "severity": "medium"}], "overall": "pre-computed demo"}
     arb = pipeline.arbiter(0.0, ev, sens, crit, 0)
     result = {"plan": accepted, "evaluation": {k: v for k, v in ev.items() if k != "spec"}, "sensitivity": sens, "critic": crit, "arbiter": arb,
-              "summary": f"Demo (pre-computed, no AI): the twin suggests {len(accepted)} verified fixes could save about {ev['saved_kwh_month']:.0f} kWh a month, around {ev['saved_egp_year']:,} EGP a year. These are simulated estimates; an engineer must verify them on site.",
+              "summary": f"Demo (pre-computed, no AI): the twin suggests {len(accepted)} verified fixes could save about {ev['saved_kwh_month']:.0f} kWh a month, around {ev['saved_egp_year']:,} USD a year. These are simulated estimates; an engineer must verify them on site.",
               "plan_detail": twin.plan_detail(spec, accepted), "params": {"tariff_egp_per_kwh": twin.PARAMS["tariff_egp_per_kwh"], "grid_kgco2_per_kwh": twin.PARAMS["grid_kgco2_per_kwh"]},
               "calibration_err_pct": 0.0, "cost_usd": 0.0, "model_calls": 0, "spec_after": ev["spec"]}
     return {"spec": spec, "description": demo.DESCRIPTION, "bill_kwh": bill, "calibration": [round(twin.monthly_kwh(generic)), round(twin.monthly_kwh(spec))], "rounds": rounds, "result": result}

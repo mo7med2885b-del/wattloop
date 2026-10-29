@@ -147,7 +147,7 @@ const App = (() => {
         caption("Calibrating to your bill", `Twin ${fmt(ev.twin_kwh)} vs bill ${fmt(ev.bill_kwh)} kWh (${ev.err_pct > 0 ? "+" : ""}${ev.err_pct}%)`); alog(`Calibration ${ev.iter}: ${ev.err_pct > 0 ? "+" : ""}${ev.err_pct}%`, Math.abs(ev.err_pct) <= 5 ? "ok" : ""); radar(Math.max(0, Math.round(100 - Math.abs(ev.err_pct) * 3))); break;
       case "note": alog(ev.text); break;
       case "fix_round": notify("r"); renderBuild(ev.spec_after, "after fixes · round " + ev.round); fixRows(ev.round, ev.results); S.hourA = ev.hourly_before; S.hourB = ev.hourly_after; S.partsA = ev.parts_before; S.partsB = ev.parts_after; if (calSpec) Factory.setSpecs(calSpec, ev.spec_after, ev.parts_before, ev.parts_after, ev.hourly_before, ev.hourly_after); refreshAll(); break;
-      case "gate": notify("r"); showResult(ev.result); Factory.setSpecs(calSpec, ev.result.spec_after, S.partsA, S.partsB, S.hourA, S.hourB); refreshAll(); caption("Verified in the twin", "Simulated estimates. An engineer must review before any action."); alog(`Plan verified: ${fmt(ev.result.evaluation.saved_egp_year)} EGP/yr (simulated)`, "ok"); if (autoCompare) { autoCompare = false; setMode("compare"); } break;
+      case "gate": notify("r"); showResult(ev.result); Factory.setSpecs(calSpec, ev.result.spec_after, S.partsA, S.partsB, S.hourA, S.hourB); refreshAll(); caption("Verified in the twin", "Simulated estimates. An engineer must review before any action."); alog(`Plan verified: ${fmt(ev.result.evaluation.saved_egp_year)} USD/yr (simulated)`, "ok"); if (autoCompare) { autoCompare = false; setMode("compare"); } break;
       case "decision": $("#decided").textContent = "Engineer decision recorded: " + ev.action; alog("Engineer: " + ev.action, ev.action === "approve" ? "ok" : ""); break;
       case "rejected": notify("l"); notify("r"); hideLoader(); caption("Image refused", ev.reason); imgStatus("bad", "Not processed: " + ev.reason); alog("Image refused: " + ev.reason, "bad"); $("#summary").textContent = "No analysis: the image is not a factory."; break;
       case "cancelled": hideLoader(); caption("Run cancelled", "No further model calls will be made."); alog("Run cancelled by you", "bad"); $("#summary").textContent = "Cancelled."; break;
@@ -158,7 +158,7 @@ const App = (() => {
   }
   function fixRows(round, results) {
     const tb = $("#fixes tbody"); if (round === 1) tb.innerHTML = "<tr><th>Fix</th><th>Target</th><th>Verdict</th></tr>";
-    results.forEach((r) => { const tr = document.createElement("tr"); tr.className = r.status === "accepted" ? "ok" : "no"; tr.innerHTML = `<td>${r.fix.type.replace(/_/g, " ")}</td><td>${r.fix.target || (r.fix.kwp ? r.fix.kwp + " kWp" : "")}</td><td>${r.status === "accepted" ? "✓ " + fmt(r.saved_egp_year) + " EGP/yr" : "✗ " + r.reason}</td>`; tb.append(tr);
+    results.forEach((r) => { const tr = document.createElement("tr"); tr.className = r.status === "accepted" ? "ok" : "no"; tr.innerHTML = `<td>${r.fix.type.replace(/_/g, " ")}</td><td>${r.fix.target || (r.fix.kwp ? r.fix.kwp + " kWp" : "")}</td><td>${r.status === "accepted" ? "✓ " + fmt(r.saved_egp_year) + " USD/yr" : "✗ " + r.reason}</td>`; tb.append(tr);
       if (r.status !== "accepted") { rej++; alog("Rejected: " + r.fix.type.replace(/_/g, " ") + ": " + r.reason, "bad"); if (window.gsap && !reduce) gsap.from(tr, { backgroundColor: "#ff4d3d", duration: .9 }); } });
     $("#fixnote").textContent = `Round ${round}: rejected fixes go back to the hunter with the reason.`;
   }

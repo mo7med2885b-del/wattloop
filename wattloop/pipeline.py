@@ -335,7 +335,7 @@ def critic(run: Run, spec: dict, plan: list[dict], ev: dict, sens: dict):
     if not meta.available():
         raise RuntimeError("demo mode")
     sysm = SYSTEM_COMMON + ' You are the Critic. Try to refute the savings claim. Return {"challenges":[{"fix":str,"concern":str,"severity":"low|medium|high"}],"overall":str}.'
-    r = _call(run, sysm, f"Plan: {json.dumps(plan)}\nSimulated result: saved {ev['saved_kwh_month']} kWh/month, {ev['saved_egp_year']} EGP/year, payback {ev['payback_months']} months.\n"
+    r = _call(run, sysm, f"Plan: {json.dumps(plan)}\nSimulated result: saved {ev['saved_kwh_month']} kWh/month, {ev['saved_egp_year']} USD/year, payback {ev['payback_months']} months.\n"
                          f"Sensitivity (assumptions +/-20%): {json.dumps(sens)}\nTwin components: {json.dumps(spec['components'])}\n"
                          "Check: baseline overstated? fixes overlapping? real-world installation risks? What must an engineer verify on site?")
     j = r["json"]
@@ -374,7 +374,7 @@ def report_writer(run: Run, ev: dict, plan: list[dict], arb: dict, crit: dict):
     if meta.available():
         try:
             sysm = SYSTEM_COMMON + ' Return {"summary":str}. Write 3 short sentences for a plant manager. Use ONLY the numbers given; never add other numbers. Say these are simulated estimates that an engineer must verify on site.'
-            r = _call(run, sysm, f"Verified result: {ev['saved_kwh_month']} kWh/month, {ev['saved_egp_year']} EGP/year, {ev['co2_t_year']} tonnes CO2/year, capex {ev['capex_egp']} EGP, payback {ev['payback_months']} months. Range {arb['range_egp_year']}. Fixes: {[f['type'] for f in plan]}")
+            r = _call(run, sysm, f"Verified result: {ev['saved_kwh_month']} kWh/month, {ev['saved_egp_year']} USD/year, {ev['co2_t_year']} tonnes CO2/year, capex {ev['capex_egp']} USD, payback {ev['payback_months']} months. Range {arb['range_egp_year']}. Fixes: {[f['type'] for f in plan]}")
             s = (r["json"] or {}).get("summary", "")
             allowed = [ev["saved_kwh_month"], ev["saved_egp_year"], ev["co2_t_year"], ev["capex_egp"], ev["payback_months"] or 0, *arb["range_egp_year"]]
             found = [float(x.replace(",", "").rstrip(".")) for x in NUM.findall(s) if x.replace(",", "").rstrip(".")]
@@ -384,7 +384,7 @@ def report_writer(run: Run, ev: dict, plan: list[dict], arb: dict, crit: dict):
         except Exception:  # noqa: BLE001
             pass
     if not summary:
-        summary = (f"The twin suggests {len(plan)} fixes could save about {ev['saved_kwh_month']:.0f} kWh a month, around {ev['saved_egp_year']:,} EGP a year. "
+        summary = (f"The twin suggests {len(plan)} fixes could save about {ev['saved_kwh_month']:.0f} kWh a month, around {ev['saved_egp_year']:,} USD a year. "
                    "These are simulated estimates; an engineer must verify them on site before any spending.")
     return {"summary": summary}, info
 

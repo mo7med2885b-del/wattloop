@@ -186,12 +186,12 @@ const WF = (() => {
       case "note": log(ev.text, "warn"); break;
       case "fix_round": {
         pulse("hunt_verify", "", 0.7); setTimeout(() => pulse("verify_hunt", "back", 0.7, false), 750);
-        ev.results.forEach((r) => { if (r.status === "rejected") { rej += 1; $$("tRej").textContent = String(rej); lines.verify_hunt.classList.add("warn"); log(`Rejected ${r.fix.type.replace(/_/g, " ")}: ${r.reason}`, "bad"); } else log(`Verified ${r.fix.type.replace(/_/g, " ")} (${Math.round(r.saved_egp_year).toLocaleString()} EGP/yr)`, "ok"); });
+        ev.results.forEach((r) => { if (r.status === "rejected") { rej += 1; $$("tRej").textContent = String(rej); lines.verify_hunt.classList.add("warn"); log(`Rejected ${r.fix.type.replace(/_/g, " ")}: ${r.reason}`, "bad"); } else log(`Verified ${r.fix.type.replace(/_/g, " ")} (${Math.round(r.saved_egp_year).toLocaleString()} USD/yr)`, "ok"); });
         if (!rej) $$("tRej").textContent = "0"; break; }
       case "gate": { gateResult = ev.result; setTimeout(cpOpen, 900);
         const r = ev.result, e = r.evaluation; nodes.gate.classList.remove("thinking"); nodes.gate.classList.add("waiting"); icons.gate.think(true); stopBreathing(); pulse("final", "final", 1.3); pulse("report_gate", "human", 0.7);
-        status("Waiting for engineer", "wait"); $$("tSave").textContent = Math.round(e.saved_egp_year).toLocaleString() + " EGP/yr · " + r.arbiter.level;
-        const b = $$("wfBrief"); b.hidden = false; b.replaceChildren(); add(b, "h4", "Orchestrator brief"); add(b, "div", r.summary); add(b, "div", `Confidence ${r.arbiter.level} (${r.arbiter.confidence_score}) · range ${Math.round(r.arbiter.range_egp_year[0]).toLocaleString()}–${Math.round(r.arbiter.range_egp_year[1]).toLocaleString()} EGP/yr`, "row");
+        status("Waiting for engineer", "wait"); $$("tSave").textContent = Math.round(e.saved_egp_year).toLocaleString() + " USD/yr · " + r.arbiter.level;
+        const b = $$("wfBrief"); b.hidden = false; b.replaceChildren(); add(b, "h4", "Orchestrator brief"); add(b, "div", r.summary); add(b, "div", `Confidence ${r.arbiter.level} (${r.arbiter.confidence_score}) · range ${Math.round(r.arbiter.range_egp_year[0]).toLocaleString()}–${Math.round(r.arbiter.range_egp_year[1]).toLocaleString()} USD/yr`, "row");
         log("Verified plan ready: requires engineer review", "human"); break; }
       case "decision": $$("wfCp").hidden = true; nodes.gate.classList.remove("waiting"); nodes.gate.classList.add("done", "st-human"); icons.gate.think(false); icons.gate.done(); nodes.gate.querySelector(".wf-stance").textContent = ev.action.toUpperCase(); status("Engineer: " + ev.action, ""); log(`Engineer decision: ${ev.action}`, "human"); break;
       case "rejected": nodes.scene.classList.remove("thinking"); nodes.scene.classList.add("rejected"); stopBreathing(); status("Stopped: not a factory", "wait"); $$("tSave").textContent = "Image refused"; log("Scene Check refused the image: " + ev.reason, "bad"); break;
@@ -219,8 +219,8 @@ const WF = (() => {
   function cpOpen() {
     const r = gateResult; if (!r) return; const e = r.evaluation, a = r.arbiter, d = r.plan_detail || [];
     $$("cpLead").textContent = `WattLoop tested ${r.plan.length} fixes in the twin and kept the ones that passed the safety checks. Nothing is final until you decide. All figures are simulated estimates, not measurements.`;
-    $$("cpNums").innerHTML = [[money(e.saved_egp_year) + " EGP/yr", "simulated saving"], [money(e.saved_kwh_month) + " kWh/mo", "energy saved"], [e.payback_months == null ? "n/a" : e.payback_months + " months", "payback (placeholder costs)"], [a.level + " (" + a.confidence_score + ")", money(a.range_egp_year[0]) + " to " + money(a.range_egp_year[1]) + " EGP/yr"]].map(([b, s]) => `<div><b>${b}</b><span>${s}</span></div>`).join("");
-    $$("cpFixes").innerHTML = d.length ? d.map((x) => `<div class="cp-row ok">${fixTitle(x.fix)} - saves ${money(x.saved_egp_year)} EGP/yr, costs about ${money(x.capex_egp)} EGP (estimate)</div>`).join("") : r.plan.map((f) => `<div class="cp-row ok">${fixTitle(f)}</div>`).join("");
+    $$("cpNums").innerHTML = [[money(e.saved_egp_year) + " USD/yr", "simulated saving"], [money(e.saved_kwh_month) + " kWh/mo", "energy saved"], [e.payback_months == null ? "n/a" : e.payback_months + " months", "payback (placeholder costs)"], [a.level + " (" + a.confidence_score + ")", money(a.range_egp_year[0]) + " to " + money(a.range_egp_year[1]) + " USD/yr"]].map(([b, s]) => `<div><b>${b}</b><span>${s}</span></div>`).join("");
+    $$("cpFixes").innerHTML = d.length ? d.map((x) => `<div class="cp-row ok">${fixTitle(x.fix)} - saves ${money(x.saved_egp_year)} USD/yr, costs about ${money(x.capex_egp)} USD (estimate)</div>`).join("") : r.plan.map((f) => `<div class="cp-row ok">${fixTitle(f)}</div>`).join("");
     const w = ((r.critic && r.critic.challenges) || []).slice(0, 4).map((c) => `<div class="cp-row">${String(c.concern).replace(/</g, "&lt;")} (${c.severity})</div>`).join("");
     $$("cpWatch").innerHTML = w + '<div class="cp-row">Cost figures are placeholders: get supplier quotes. Confirm equipment ratings and operating hours on site.</div>';
     $$("cpMsg").textContent = ""; $$("wfCp").hidden = false;

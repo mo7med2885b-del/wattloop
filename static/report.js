@@ -35,7 +35,7 @@ const Report = (() => {
   async function download({ result, specBefore, billKwh, caseName }) {
     if (!result) return;
     const { jsPDF } = window.jspdf, doc = new jsPDF({ unit: "mm", format: "a4" }), W = 210, M = 14; let y = 0;
-    const e = result.evaluation, tariff = (result.params || {}).tariff_egp_per_kwh || 2.05, co2f = (result.params || {}).grid_kgco2_per_kwh || 0.55;
+    const e = result.evaluation, tariff = (result.params || {}).tariff_egp_per_kwh || 0.10, co2f = (result.params || {}).grid_kgco2_per_kwh || 0.45;
     const base = e.base_kwh_month, after = e.new_kwh_month, monthNow = (billKwh || base) * tariff, monthAfter = after * tariff * ((billKwh || base) / base);
     const logo = await imgToDataUrl("/static/assets/logo.png", 128), photo = await imgToDataUrl($("#photo").src, 900);
     const snapNow = Factory.snapshot("now"), snapAfter = Factory.snapshot("after");
@@ -47,12 +47,12 @@ const Report = (() => {
     head("Energy audit report - screening estimate from a digital twin");
     doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.setTextColor(...DK); doc.text(ascii(caseName), M, y); y += 6;
     doc.setFont("helvetica", "bold"); doc.setFontSize(9); doc.setTextColor(...OR); doc.text("REQUIRES ENGINEER REVIEW - simulated estimates, not measurements", M, y); y += 6;
-    const tiles = [["Today", `${f0(billKwh || base)} kWh/month`, `${f0(monthNow)} EGP/month`], ["After fixes (simulated)", `${f0(after * (billKwh || base) / base)} kWh/month`, `${f0(monthAfter)} EGP/month`], ["Saving", `${f0(e.saved_egp_year)} EGP/year`, `${f0(e.saved_kwh_month)} kWh/month`], ["Investment / payback", `${f0(e.capex_egp)} EGP (estimate)`, e.payback_months != null ? `${f1(e.payback_months)} months` : "n/a"]];
+    const tiles = [["Today", `${f0(billKwh || base)} kWh/month`, `${f0(monthNow)} USD/month`], ["After fixes (simulated)", `${f0(after * (billKwh || base) / base)} kWh/month`, `${f0(monthAfter)} USD/month`], ["Saving", `${f0(e.saved_egp_year)} USD/year`, `${f0(e.saved_kwh_month)} kWh/month`], ["Investment / payback", `${f0(e.capex_egp)} USD (estimate)`, e.payback_months != null ? `${f1(e.payback_months)} months` : "n/a"]];
     const tw = (W - 2 * M - 9) / 4; tiles.forEach((t, i) => { const x = M + i * (tw + 3); doc.setFillColor(245, 246, 247); doc.rect(x, y, tw, 20, "F"); doc.setFillColor(...(i === 2 ? GR : OR)); doc.rect(x, y, 1.3, 20, "F"); doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(...MUT); doc.text(ascii(t[0]), x + 3.5, y + 5); doc.setFont("helvetica", "bold"); doc.setFontSize(9.5); doc.setTextColor(...DK); doc.text(ascii(t[1]), x + 3.5, y + 11.5); doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(...MUT); doc.text(ascii(t[2]), x + 3.5, y + 16.5); });
     y += 25;
     para(`${result.summary}`, 9);
     const range = result.arbiter.range_egp_year;
-    para(`Confidence: ${result.arbiter.level} (${result.arbiter.confidence_score}). Saving range with the evidence-based assumption sets: ${f0(range[0])} to ${f0(range[1])} EGP per year. Avoided emissions about ${f1(e.co2_t_year)} tonnes CO2 per year (grid factor ${co2f} kg/kWh).`, 8.5, MUT);
+    para(`Confidence: ${result.arbiter.level} (${result.arbiter.confidence_score}). Saving range with the evidence-based assumption sets: ${f0(range[0])} to ${f0(range[1])} USD per year. Avoided emissions about ${f1(e.co2_t_year)} tonnes CO2 per year (grid factor ${co2f} kg/kWh).`, 8.5, MUT);
     y += 1; h2("The facility and its digital twin");
     const iw = (W - 2 * M - 6) / 2, ih = iw * 0.58;
     if (photo) { const r = photo.h / photo.w; doc.addImage(photo.url, "JPEG", M, y, iw, Math.min(ih, iw * r)); }
@@ -69,11 +69,11 @@ const Report = (() => {
     doc.autoTable({ startY: y, margin: { left: M, right: M }, head: [["Problem", "Technical explanation", "Energy wasted (kWh/month)"]], body: detail.map((d) => [ascii(probName(d.fix)), ascii(problem(d.fix, specBefore || { components: [] })), f0(d.saved_kwh_month)]), styles: { fontSize: 8, cellPadding: 1.8, textColor: [40, 40, 40] }, headStyles: { fillColor: DK, textColor: 255 }, columnStyles: { 0: { cellWidth: 42, fontStyle: "bold" }, 2: { cellWidth: 30, halign: "right" } } });
     y = doc.lastAutoTable.finalY + 7; h2("2. What to fix, what it costs, and when");
     const rows = detail.map((d) => ({ d, w: when(d) })).sort((a, b) => a.w[0].localeCompare(b.w[0]));
-    doc.autoTable({ startY: y, margin: { left: M, right: M }, head: [["When", "Fix", "Cost (EGP, estimate)", "Saves (EGP/year)", "Payback (months)"]], body: rows.map(({ d, w }) => [ascii(w[0] + "\n" + w[1]), ascii(fixName(d.fix)), f0(d.capex_egp), f0(d.saved_egp_year), d.payback_months == null ? "n/a" : f1(d.payback_months)]), styles: { fontSize: 8, cellPadding: 1.8, textColor: [40, 40, 40] }, headStyles: { fillColor: OR, textColor: [20, 10, 0] }, columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" } } });
+    doc.autoTable({ startY: y, margin: { left: M, right: M }, head: [["When", "Fix", "Cost (USD, estimate)", "Saves (USD/year)", "Payback (months)"]], body: rows.map(({ d, w }) => [ascii(w[0] + "\n" + w[1]), ascii(fixName(d.fix)), f0(d.capex_egp), f0(d.saved_egp_year), d.payback_months == null ? "n/a" : f1(d.payback_months)]), styles: { fontSize: 8, cellPadding: 1.8, textColor: [40, 40, 40] }, headStyles: { fillColor: OR, textColor: [20, 10, 0] }, columnStyles: { 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" } } });
     y = doc.lastAutoTable.finalY + 4;
     para("Each fix is tested on its own in this table; savings overlap when fixes are combined, so the combined total on page 1 is lower than the sum of the rows. Costs are PLACEHOLDER ESTIMATES (status UNVERIFIED: no Egyptian price source was found). Replace them with supplier quotes before any decision.", 8, MUT);
     y += 2; h2("3. Money: what you spend today and after");
-    doc.autoTable({ startY: y, margin: { left: M, right: M }, head: [["", "Energy (kWh/month)", "Cost at " + tariff + " EGP/kWh (EGP/month)", "EGP/year"]], body: [["Today (your bill)", f0(billKwh || base), f0(monthNow), f0(monthNow * 12)], ["After the fixes (simulated)", f0(after * (billKwh || base) / base), f0(monthAfter), f0(monthAfter * 12)], ["Difference", f0(e.saved_kwh_month), f0(monthNow - monthAfter), f0(e.saved_egp_year)]], styles: { fontSize: 8.5, cellPadding: 1.8, textColor: [40, 40, 40] }, headStyles: { fillColor: DK, textColor: 255 }, columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" } } });
+    doc.autoTable({ startY: y, margin: { left: M, right: M }, head: [["", "Energy (kWh/month)", "Cost at " + tariff + " USD/kWh (USD/month)", "USD/year"]], body: [["Today (your bill)", f0(billKwh || base), f0(monthNow), f0(monthNow * 12)], ["After the fixes (simulated)", f0(after * (billKwh || base) / base), f0(monthAfter), f0(monthAfter * 12)], ["Difference", f0(e.saved_kwh_month), f0(monthNow - monthAfter), f0(e.saved_egp_year)]], styles: { fontSize: 8.5, cellPadding: 1.8, textColor: [40, 40, 40] }, headStyles: { fillColor: DK, textColor: 255 }, columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" } } });
     y = doc.lastAutoTable.finalY + 6;
 
     // ---------------- page 3: risks, evidence, sign-off
@@ -82,7 +82,7 @@ const Report = (() => {
     para("Always verify on site: baseline load, equipment ratings, installation constraints and the cost quotes.", 8.5, MUT); y += 2;
     h2("5. How reliable are these numbers");
     para("The twin's component formulas were checked against 27 published data points from 8 independent sources (pump test, compressed-air fact sheets and case study, lamp measurements, office HVAC studies). Median error before fitting: 13.6 percent, mean 17.6 percent, worst case 62.5 percent (cooling setpoint savings, which are understated). This is a check against published component data, not a field validation of this plant. Cooling-setpoint savings use the conservative 6 percent per degree, with a 4.5 to 10 percent band.", 8.5);
-    para(`Inputs: tariff ${tariff} EGP/kWh (high-voltage industry, Arab Finance 2026; medium and low voltage unverified), grid factor ${co2f} kg CO2/kWh (UNFCCC 2019), solar yield from EU JRC PVGIS. Capex values are placeholders. Standby load is a user input.`, 8, MUT);
+    para(`Inputs: tariff ${tariff} USD/kWh (high-voltage industry, Arab Finance 2026; medium and low voltage unverified), grid factor ${co2f} kg CO2/kWh (UNFCCC 2019), solar yield from EU JRC PVGIS. Capex values are placeholders. Standby load is a user input.`, 8, MUT);
     para(`Models used: Muse Spark (reading the photo, writing and calibrating the twin, proposing fixes, critique, report), SAM 3.1 (locating equipment in the photo), Muse Image (the demo photo). Run cost: about $${(result.cost_usd || 0).toFixed(3)} for ${result.model_calls || 0} model calls.`, 8, MUT); y += 3;
     h2("6. Engineer sign-off (required before any action)");
     doc.setDrawColor(150, 150, 150); doc.setLineWidth(.2); doc.rect(M, y, W - 2 * M, 34);

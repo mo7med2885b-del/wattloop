@@ -11,20 +11,20 @@ DAYS_PER_MONTH = 4.33  # weeks per month
 
 # Scenario parameter sets for sensitivity (low / base / high savings).
 PARAMS = {
-    "tariff_egp_per_kwh": 2.05,       # high-voltage industry, Arab Finance report (docs/research/egypt-energy.md); user-editable
-    "grid_kgco2_per_kwh": 0.55,       # UNFCCC IFI grid factor for Egypt, Jul 2019 (docs/research/egypt-energy.md)
+    "tariff_egp_per_kwh": 0.10,       # USD per kWh (key name kept): about the US industrial average, EIA 9.64 cents/kWh in Aug 2026 (preliminary); editable, set your local price
+    "grid_kgco2_per_kwh": 0.45,       # kg CO2 per kWh: UNVERIFIED illustrative world-average style value; set your grid factor
     "pv_kwh_per_kwp_day": 5.0,        # PVGIS Cairo 1,827 kWh/kWp/yr (docs/research/egypt-energy.md)
     "led_scale": 1.0,                 # multiplies the LED power ratios below (sensitivity only)
     "hvac_pct_per_c": 0.06,           # 6% per degC: Roussac et al. 2011, 33 offices (conservative end; other studies 8-16%)
     "leak_slope": 1.0,                # power saved is about proportional to leak flow removed (DTE case study, n=1, weak)
     "static_share_default": 0.3,      # share of pump head that does not fall with speed; a plant input, 0.3 is a placeholder
     "static_shift": 0.0,              # sensitivity only
-    "capex_vsd_egp_per_kw": 4500.0,   # ASSUMPTION
-    "capex_leak_egp": 15000.0,        # ASSUMPTION per audit and repair
-    "capex_led_egp_per_kw": 6000.0,   # ASSUMPTION
-    "capex_controls_egp": 8000.0,     # ASSUMPTION
-    "capex_standby_egp": 3000.0,      # ASSUMPTION
-    "capex_pv_egp_per_kwp": 18000.0,  # ASSUMPTION
+    "capex_vsd_egp_per_kw": 150.0,   # USD placeholder (UNVERIFIED), replace with supplier quotes
+    "capex_leak_egp": 3000.0,   # USD placeholder (UNVERIFIED), replace with supplier quotes
+    "capex_led_egp_per_kw": 120.0,   # USD placeholder (UNVERIFIED), replace with supplier quotes
+    "capex_controls_egp": 1500.0,   # USD placeholder (UNVERIFIED), replace with supplier quotes
+    "capex_standby_egp": 500.0,   # USD placeholder (UNVERIFIED), replace with supplier quotes
+    "capex_pv_egp_per_kwp": 900.0,   # USD placeholder (UNVERIFIED), replace with supplier quotes
     "capex_hvac_egp": 0.0,
 }
 # LED power as a share of the old lamp, by baseline: PNNL-20404 (2011) T8 median of 0.649/0.597/0.772, T12 0.49; metal halide from rated watts only (PARTIAL)

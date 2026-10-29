@@ -28,4 +28,4 @@ DESCRIPTION = (
 
 def case() -> dict:
     bill = round(twin.monthly_kwh(TRUTH), -2)
-    return {"description": DESCRIPTION, "bill_kwh": bill, "currency": "EGP", "truth_hidden": True}
+    return {"description": DESCRIPTION, "bill_kwh": bill, "currency": "USD", "truth_hidden": True}
