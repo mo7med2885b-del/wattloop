@@ -1,5 +1,3 @@
-<p align="center"><img src="assets/screens/workflow.jpg" alt="The WattLoop agent loop running live" width="100%"></p>
-
 # WattLoop
 
 ### An energy audit in minutes, not weeks. Meta models build a living 3D twin of a factory, a simulator proves every fix before money is spent, and an engineer gets a ready report.
