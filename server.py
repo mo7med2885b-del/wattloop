@@ -114,6 +114,42 @@ def evidence():
     return _EVIDENCE
 
 
+class ReviewReq(BaseModel):
+    render_b64: str
+    mode: str = "judge"          # judge | revise
+    run_id: str | None = None
+    gallery_id: str | None = None
+    spec: dict | None = None
+
+
+@app.post("/api/scene_review")
+def scene_review(req: ReviewReq):
+    """Muse Spark compares the photo with a render of the twin, scores it, and (revise) returns a corrected, validated design."""
+    from wattloop import designer
+    run = RUNS.get(req.run_id) if req.run_id else None
+    if run is not None:
+        photo, spec, desc, budget = run.image, run.spec, run.case.get("description", ""), run.budget
+    else:
+        item = next((g for g in gallery_items() if g["id"] == req.gallery_id), None)
+        if not item or not req.spec:
+            raise HTTPException(400, "need a run or a gallery image with a spec")
+        photo = scene.demo_png() if item["id"] == "demo" else (GALLERY / Path(item["file"]).name).read_bytes()
+        spec, desc, budget = req.spec, "", meta.Budget(max_calls=2)
+    if photo is None or spec is None or req.mode not in ("judge", "revise"):
+        raise HTTPException(400, "nothing to review")
+    render = clean_image(req.render_b64)
+    r = meta.chat(budget, designer.REVIEW_SYSTEM, designer.review_prompt(spec, req.mode, desc), images=[photo, render], effort="medium", max_tokens=8000)
+    j = r["json"] or {}
+    out = {"score": j.get("score"), "matches": j.get("matches", [])[:5], "mismatches": j.get("mismatches", [])[:5], "usd": r["usd"]}
+    if req.mode == "revise" and j.get("layout") is not None:
+        fb = {c["id"]: dict(c["design"], why="kept") for c in spec["components"] if c.get("design")}
+        design = designer.validate_design(j, spec, fb)
+        designer.apply_design(spec, design)          # in place: later events of the run carry the refined design
+        out["spec"] = spec
+        out["notes"] = design["notes"]
+    return out
+
+
 @app.get("/api/demo/instant")
 def demo_instant():
     """Pre-computed demo twin: real twin code and real verifier, no model call. Round 1 is deliberately over-aggressive so the rejection shows."""

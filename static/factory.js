@@ -137,8 +137,24 @@ window.Factory = (function () {
     }
     // props designed by the Scene Designer (validated primitives only): they make the plant look like this plant
     const PAL = { steel: 0x59626d, dark: 0x2b313a, accent: 0x6b3a14 };
+    const propMesh = (x) => {
+      const col = PAL[x.color] || PAL.steel, ec = x.color === "accent" ? OR : EDGE, sz = x.size;
+      if (x.shape === "ribbed") {   // drum with rings, lying along x (kiln, dryer, rotary drum)
+        const g = new T.Group(), body = Cyl(sz[0], sz[1], col, ec, 28, .75); body.rotation.z = Math.PI / 2; g.add(body);
+        for (let i = 0; i < 6; i++) { const ring = Cyl(sz[0] * 1.08, .18, DARK, ec, 28, .8); ring.rotation.z = Math.PI / 2; ring.position.x = -sz[1] / 2 + (i + .5) * sz[1] / 6; g.add(ring); }
+        return g;
+      }
+      if (x.shape === "rack") {   // shelving frame with pallets: uprights, shelves, boxes
+        const g = new T.Group(), [w, h, d] = sz;
+        [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([a, b]) => { const u = Box(.12, h, .12, col, ec, .8); u.position.set(a * w / 2, 0, b * d / 2); g.add(u); });
+        for (let s2 = 0; s2 < 3; s2++) { const y = -h / 2 + (s2 + .6) * h / 3.2, sh = Box(w, .08, d, DARK, ec, .6); sh.position.y = y; g.add(sh); for (let k = 0; k < 3; k++) { const p = Box(w / 4, h / 7, d * .7, 0x4a3a28, OR, .55); p.position.set(-w / 3 + k * w / 3, y + h / 14 + .04, 0); g.add(p); } }
+        return g;
+      }
+      if (x.shape === "hopper") { const m2 = new T.Mesh(new T.CylinderGeometry(sz[0], sz[0] * .35, sz[1], 20), mat(col)); edges(m2, ec, .75); return m2; }
+      return x.shape === "cylinder" ? Cyl(sz[0], sz[1], col, ec, 22, .75) : Box(sz[0], sz[1], sz[2], col, ec, .75);
+    };
     (spec.extras || []).forEach((x) => {
-      const m = x.shape === "cylinder" ? Cyl(x.size[0], x.size[1], PAL[x.color] || PAL.steel, x.color === "accent" ? OR : EDGE, 22, .75) : Box(x.size[0], x.size[1], x.size[2], PAL[x.color] || PAL.steel, x.color === "accent" ? OR : EDGE, .75);
+      const m = propMesh(x);
       const rp = x.repeat || { n: 1, dx: 0, dz: 0 };
       for (let i = 0; i < Math.min(12, rp.n || 1); i++) { const k = i === 0 ? m : m.clone(); k.position.set(Math.max(-16, Math.min(16, x.pos[0] + i * rp.dx)), x.pos[1], Math.max(-10.5, Math.min(10.5, x.pos[2] + i * rp.dz))); sc.add(k); }
     });

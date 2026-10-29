@@ -137,7 +137,7 @@ const App = (() => {
       case "node_done":
         stepMark(ev.node, "done");
         if (ev.node === "engineer" && ev.output && ev.output.spec) { renderBuild(ev.output.spec, "engineer draft", true); calSpec = ev.output.spec; }
-        if (ev.node === "design") { hideLoader(); const sp = (ev.output && ev.output.spec) || calSpec; if (sp) { const z = Array(24).fill(0); calSpec = sp; renderBuild(sp, "designed layout"); Factory.setSpecs(sp, sp, {}, {}, z, z); refreshAll(); const n = ev.output && ev.output.design ? ev.output.design.extras.length : 0; caption("3D scene designed", ev.fallback ? "Layout from the SAM boxes (model design not available)." : `Muse Spark placed the machines from the photo and added ${n} props.`); } }
+        if (ev.node === "design") { hideLoader(); const sp = (ev.output && ev.output.spec) || calSpec; if (sp) { const z = Array(24).fill(0); calSpec = sp; renderBuild(sp, "designed layout"); Factory.setSpecs(sp, sp, {}, {}, z, z); refreshAll(); if (runId && !ev.fallback) setTimeout(() => reviewScene(runId), 2600); const n = ev.output && ev.output.design ? ev.output.design.extras.length : 0; caption("3D scene designed", ev.fallback ? "Layout from the SAM boxes (model design not available)." : `Muse Spark placed the machines from the photo and added ${n} props.`); } }
         calls += ev.calls || 0; cost += ev.usd || 0;
         if (ev.node === "vision" && ev.output && ev.output.equipment) { detect.obs = ev.output; updateBadge(); }
         if (ev.node === "segment" && ev.output && ev.output.boxes) { overlay(ev.output.boxes); detect.boxes = ev.output.boxes; updateBadge(); }
@@ -172,6 +172,15 @@ const App = (() => {
     const signs = detect.obs && detect.obs.waste_signs && detect.obs.waste_signs.length ? `<h4>Waste signs Muse Spark noticed</h4>` + detect.obs.waste_signs.map((w) => `<div class="sitem"><span>${w}</span></div>`).join("") : "";
     list.innerHTML = `<h4>Equipment named by Muse Spark vision</h4>${eq || "<div class='sitem'><span>none</span></div>"}<h4>Regions located by SAM 3.1 (click to highlight)</h4>${rg || "<div class='sitem'><span>none found</span></div>"}${signs}`;
     list.querySelectorAll("[data-i]").forEach((n) => { const i = +n.dataset.i; const on = () => { rects.forEach((r, k) => { r.setAttribute("stroke-width", k === i ? 7 : 3); r.setAttribute("fill", k === i ? "rgba(255,106,0,.35)" : "rgba(255,106,0,.10)"); }); list.querySelectorAll(".sitem").forEach((x) => x.classList.toggle("on", x === n)); }; n.addEventListener("click", on); n.addEventListener("mouseenter", on); });
+  }
+  // Scene Reviewer: Muse Spark compares the photo with a render of the 3D twin and refines the design once (runs while calibration continues)
+  async function reviewScene(rid) {
+    try {
+      if (rid !== runId || !running) return; const png = Factory.snapshot("now"); if (!png) return; alog("Scene reviewer: comparing the 3D with the photo…");
+      const r = await fetch("/api/scene_review", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ run_id: rid, render_b64: png, mode: "revise" }) }); if (!r.ok || rid !== runId) return;
+      const o = await r.json(); if (o.spec) { calSpec = o.spec; const z = Array(24).fill(0); Factory.setSpecs(o.spec, o.spec, S.partsA, S.partsA, S.hourA.length ? S.hourA : z, S.hourA.length ? S.hourA : z); renderBuild(o.spec, "refined layout"); }
+      alog(`Scene reviewer: match ${o.score ?? "?"}/10` + (o.mismatches && o.mismatches[0] ? " - fixed: " + o.mismatches[0] : ""), "ok");
+    } catch (e) { /* the review is optional: the run continues without it */ }
   }
   function overlay(boxes) { const o = $("#overlay"); o.innerHTML = ""; boxes.forEach((b) => { const [x1, y1, x2, y2] = b.box; el("rect", { x: x1, y: y1, width: x2 - x1, height: y2 - y1, fill: "rgba(255,106,0,.12)", stroke: "#ff6a00", "stroke-width": 3, "vector-effect": "non-scaling-stroke" }, o); el("text", { x: x1 + 6, y: y1 + 28, fill: "#ff9a4d", "font-size": 26, "font-weight": 700 }, o).textContent = b.phrase; }); }
   async function poll() { const r = await (await fetch(`/api/run/${runId}?since=${since}`)).json(); since = r.next; r.events.forEach((ev) => { try { handle(ev); } catch (e) { console.error("event handler failed", ev.type, e); } }); }

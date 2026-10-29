@@ -114,14 +114,14 @@ def parse_json(text: str) -> dict | None:
 
 
 def chat(budget: Budget, system: str, user: str, *, image: bytes | None = None, effort: str = "low",
-         max_tokens: int = 4000, timeout: int = 120, model: str | None = None) -> dict:
+         max_tokens: int = 4000, timeout: int = 120, model: str | None = None, images: list[bytes] | None = None) -> dict:
     """One Muse Spark call. Returns {text, json, model, ms, usd, tokens_in, tokens_out}. Raises on failure."""
     budget.check()
     model = model or env("META_MODEL", "muse-spark-1.3")
     content: list | str = user
-    if image:
-        content = [{"type": "text", "text": user},
-                   {"type": "image_url", "image_url": {"url": "data:image/png;base64," + base64.b64encode(image).decode()}}]
+    pics = ([image] if image else []) + list(images or [])
+    if pics:
+        content = [{"type": "text", "text": user}] + [{"type": "image_url", "image_url": {"url": "data:image/png;base64," + base64.b64encode(p).decode()}} for p in pics]
     body = {"model": model, "reasoning_effort": effort, "max_tokens": max_tokens,
             "messages": [{"role": "system", "content": system}, {"role": "user", "content": content}]}
     t0 = time.time()

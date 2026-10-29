@@ -44,6 +44,7 @@ class Run:
         self.cost = 0.0
         self.calls = 0
         self.result: dict | None = None
+        self.spec: dict | None = None
         self.decision: dict | None = None
         self.t0 = time.time()
 
@@ -165,6 +166,12 @@ def segmenter(run: Run, obs: dict):
         return {"boxes": []}, {"fallback": True, "note": "no photo or no Meta key: no overlay shown"}
     from concurrent.futures import ThreadPoolExecutor
     eq = [e for e in obs.get("equipment", []) if e.get("kind") != "standby"][:6]
+    seen = {(e.get("phrase") or "").lower() for e in eq}
+    for ph in designer.STRUCTURE_PHRASES:   # also locate the big structures: they become props in the 3D scene
+        if len(eq) >= 10:
+            break
+        if ph not in seen:
+            eq.append({"phrase": ph, "kind": "structure"})
     with ThreadPoolExecutor(max_workers=6) as ex:
         found = list(ex.map(lambda e: meta.sam_boxes(run.budget, run.image, e["phrase"]), eq))
     boxes = []
@@ -495,6 +502,7 @@ def _execute(run: Run):
     seg = run.step("segment", lambda: segmenter(run, obs), "Locate equipment (SAM 3.1)")
     th.join()
     spec = box["spec"]
+    run.spec = spec   # shared with the scene reviewer endpoint, which may refine the design in place
     run.step("design", lambda: scene_designer(run, spec, obs, (seg or {}).get("boxes", [])), "Design the 3D scene (Muse Spark)")
     spec, err = calibrate_loop(run, spec, case["bill_kwh"])
     plan, ev = hunt_and_verify(run, spec)
