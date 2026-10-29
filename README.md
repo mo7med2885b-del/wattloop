@@ -2,45 +2,110 @@
 
 # WattLoop
 
-**Show WattLoop a photo (or describe the machines) and give it an electricity bill. Meta models build a living 3D twin of the facility, find the energy waste, and a simulator proves each fix before any money is spent. An engineer gets a ready PDF report.**
+### An energy audit in minutes, not weeks. Meta models build a living 3D twin of a factory, a simulator proves every fix before money is spent, and an engineer gets a ready report.
 
-Built for Egyptian industry, where energy prices keep rising and most small facilities cannot pay for a full energy audit. WattLoop gives a fast first-pass audit. Every result ends at an **engineer review** gate: the numbers are simulated estimates that an engineer verifies on site.
+Give WattLoop a photo (or a few sentences about the machines) and the monthly electricity bill. It names the equipment, builds a calibrated digital twin, finds the waste, **tests every proposed fix in simulation**, rejects the impractical ones, and hands an engineer a PDF with the problems, the cost, the savings and *when* to fix each one. Nothing is final until the engineer decides.
 
-## What you see
-- **Live 3D twin** with an accelerated day cycle. *Now* shows the plant as the bill describes it (air leaks, throttled pumps, lights left on, standby loads); *After* shows the same plant with the verified fixes; *Compare* puts them side by side (left = the real factory today, calibrated to the bill; right = the same factory after the fixes). Click a machine tag to fly in and see its parameters against safe limits.
+<p align="center"><img src="assets/screens/compare.jpg" alt="Left: the real factory today. Right: the same factory after verified fixes." width="100%"><br><sub><b>Compare view.</b> Left: the factory as the bill describes it (air leaks, throttled pumps, lights left on). Right: the same factory after the fixes the simulator verified. Same clock, live kW meters.</sub></p>
+
+---
+
+## Why this matters
+
+Energy is one of the biggest controllable costs in industry, and most of it is hidden in motors, pumps, compressed air, lighting and cooling.
+
+- Industry used about **25% of Egypt's electricity** in 2015 (29% by end-2025), and **motor-driven systems are over 70%** of manufacturing electricity. A UNIDO-linked study put the *technical* savings potential in Egyptian manufacturing at **49% for pumps, 38% for fans and 39% for compressed air** ([Global Efficiency Intelligence](https://www.globalefficiencyintel.com/ee-potential-in-industrial-motor-systems-in-egypt)). These are potentials, not promises.
+- Costs keep rising: industrial gas went from $4.75 to $5.75/MMBtu in September 2025 ([Ahram Online](https://english.ahram.org.eg/NewsContent/3/14/553608/Business/Markets--Companies/Natural-gas-price-hike-triggers-new-rules-for-Egyp.aspx)), and Egypt's grid hit a record 40,000 MW peak on 11 August 2026 ([Ahram Online](https://english.ahram.org.eg/News/574471.aspx)).
+- Yet most small and medium plants **never get an audit**: it takes weeks, costs money, and the recommendations arrive without proof. Owners are left guessing which fix pays back.
+
+**WattLoop turns the first-pass audit into something any plant can do in minutes**, with every number traceable and every fix tested before it is recommended.
+
+## Business value
+
+| For the plant owner | For the energy engineer or consultant | For the country |
+|---|---|---|
+| Know *where* energy is wasted and *what each fix is worth* before spending | Skip the blank-page work: arrive on site with a calibrated twin and a ranked plan | Lower industrial demand at peak, lower emissions |
+| Fixes ranked by payback: this week, this month, next quarter | Review, not rebuild: approve, modify or reject with a recorded note | Scales to thousands of small plants that cannot afford an audit today |
+| A report the bank, the board or the engineer can act on | A traceable evidence trail for every number | Built for Egyptian tariffs and conditions |
+
+**How the value is calculated (no magic numbers):** `saving = kWh wasted x tariff`, per fix, from a physics model checked against published measurements. For the synthetic demo plant (72,700 kWh/month) the verified plan saves about **23,000 kWh/month, roughly 569,000 EGP/year**, with a stated range of about 514,000 to 660,000 EGP/year. The plant is synthetic and the equipment costs are placeholders that the report tells you to replace with supplier quotes.
+
+<p align="center"><img src="assets/screens/report1.jpg" alt="PDF report page 1" width="48%"> <img src="assets/screens/report2.jpg" alt="PDF report page 2: problems, cost, when to fix" width="48%"><br><sub><b>The deliverable.</b> A PDF with the 3D twin today and after the fixes, the problems with a technical explanation, what to fix, what it costs, when to fix it, money today versus after, risks and an engineer sign-off block.</sub></p>
+
+## See it work
+
+<p align="center"><img src="assets/screens/focus.jpg" alt="Fly-in on the compressor with leak gauge" width="100%"><br><sub><b>Click any machine.</b> The view flies in, shows the live power, the waste (a 25% air leak here) and where the parameter sits against its safe range. Dashboard widgets, an accelerated day cycle and hourly load update with it.</sub></p>
+
 - **Different image, different plant:** the layout, proportions and props come from the photo or description.
 - **Click the photo** to see exactly what Muse Spark named and what SAM 3.1 located.
 - **Fix attempts:** the Waste Hunter proposes aggressive fixes; the verifier rejects impractical ones with a reason; the hunter corrects them.
-- **Agent workflow view:** the agents as an animated graph with each step's model, latency and cost.
-- **PDF report:** 3D snapshots, the problems with a technical explanation, what to fix, what it costs, when to fix it, money today versus after, risks, evidence and an engineer sign-off block.
-- **Evidence panel:** every number's source and status, and the check of the twin's formulas against published measurements.
-- Light and dark mode, image gallery, upload, describe-the-machines mode, instant demo, cancel button.
+- **Evidence panel:** every number's source and status, and the formula check against published data.
+- Light and dark mode, image gallery, upload, describe-the-machines mode, instant demo, cancel button, collapsible panels.
 
-## How it works
-1. **Scene Check** (Muse Spark) refuses anything that is not clearly a factory (photo or text).
-2. **Vision Reader** (Muse Spark vision) lists equipment and waste signs; **Segmenter** (SAM 3.1) outlines each machine.
-3. **Twin Engineer** (Muse Spark) writes the twin as structured JSON, validated in code.
-4. **Scene Designer** (Muse Spark) places the machines from the photo, scales them and adds props; code validates every shape and position.
-5. **Calibration loop:** a deterministic simulator compares the twin's monthly kWh with the real bill; Muse Spark adjusts uncertain parameters until the error is under 5%.
-6. **Waste Hunter + Fix Verifier loop:** fixes come from a catalog (variable-speed drives, leak repair, LED, lighting controls, setpoints, standby shut-down, solar PV); code applies each to the twin and checks hard service constraints.
-7. **Critic** (Muse Spark) tries to refute the savings; code runs a sensitivity range and computes confidence.
-8. **Report Writer** (Muse Spark) writes the brief using only verified numbers; a validator rejects any number not in the result.
+---
 
-Models propose and explain. All arithmetic, verification and confidence scoring is plain code, and every model step has a deterministic fallback.
+## How the agents collaborate
 
-## Meta models used
-Muse Spark 1.3 (vision, text, structured output, reasoning), SAM 3.1 (segmentation), Muse Image 1.0 (demo and gallery photos, logo). A real run uses about 15 model calls and costs roughly 15 to 25 US cents at list prices.
+WattLoop is a **multi-agent system with a code-owned spine**. Meta models do the perception and reasoning; plain code does all arithmetic, verification and routing. No single model call decides anything on its own.
 
-## How reliable are the numbers
-The twin's component formulas were checked against 27 published data points from 8 independent sources (pump test, compressed-air fact sheets and a case study, lamp measurements, office cooling studies). Before any fitting, the median error was 13.6%, the mean 17.6% and the worst case 62.5% (cooling-setpoint savings, which are understated). This is a check against published component data, not a field validation of a plant. Reproduce it with `python -m wattloop.validation`; the Evidence panel lists every data point with its source link.
+```mermaid
+flowchart TD
+    IN([Photo and/or description + monthly bill]) --> SC{{Scene Check<br/>Muse Spark vision/text<br/>refuses non-factories}}
+    SC -- not a factory --> STOP([Refused, nothing processed])
+    SC -- factory --> VR[Vision Reader<br/>Muse Spark vision<br/>names equipment]
+    SC --> SG[Segmenter<br/>SAM 3.1<br/>locates each machine]
+    VR --> TE[Twin Engineer<br/>Muse Spark<br/>writes the twin as JSON]
+    VR --> SG
+    TE --> SD[Scene Designer<br/>Muse Spark sees the photo<br/>layout, scale, props]
+    SG --> SD
+    SD --> CAL[[Calibration loop<br/>code simulator vs the bill<br/>Muse Spark adjusts parameters]]
+    CAL --> WH[Waste Hunter<br/>Muse Spark<br/>proposes fixes]
+    WH --> FV{{Fix Verifier<br/>CODE simulates every fix<br/>safety constraints}}
+    FV -- rejected with reason --> WH
+    FV -- verified --> CR[Critic<br/>Muse Spark<br/>tries to refute the savings]
+    CR --> AR[Arbiter<br/>CODE: confidence + sensitivity range]
+    AR --> RW[Report Writer<br/>Muse Spark<br/>only verified numbers allowed]
+    RW --> EG([Engineer decides:<br/>approve / modify / reject])
+    EG --> PDF[(PDF report)]
+```
 
-## Safety and cost guards
-Per-run caps on model calls and time, a global per-minute cap, daily call and spend caps, a kill switch, hard loop limits, at most two active runs, and a cancel button that stops new model calls. Tests: `python -m pytest tests -q`.
+| Agent | Model | Job | Safeguard |
+|---|---|---|---|
+| Scene Check | Muse Spark (vision / text) | Refuse anything that is not clearly a factory (fruit, furniture, X-ray) | Runs first; nothing else starts if refused |
+| Vision Reader | Muse Spark (vision) | Name the equipment and visible waste signs | Output validated, text in photos treated as data |
+| Segmenter | SAM 3.1 | Outline each machine in the photo | Falls back to no overlay |
+| Twin Engineer | Muse Spark | Write the facility as structured JSON | Clamped to the twin's schema in code |
+| Scene Designer | Muse Spark (sees the photo) | Place machines, scale them, add props from the photo | Bounds, spacing and primitive limits enforced; falls back to a layout from the SAM boxes |
+| Calibration loop | Code + Muse Spark | Match the twin to the real bill (under 5% error) | Hard cap of 5 iterations; deterministic fallback |
+| Waste Hunter | Muse Spark | Propose fixes from a catalog, aggressively first | Every proposal is simulated, never trusted |
+| **Fix Verifier** | **Code** | Apply each fix to the twin, reject impractical ones (3% leak floor, 26 C limit, 30% minimum drive speed, solar size cap) | Rejections go back to the hunter with the reason |
+| Critic | Muse Spark | Argue against the savings claim | Lowers confidence; adds on-site checks |
+| Arbiter | **Code** | Confidence score and a low/base/high savings range | Never takes the model's confidence at its word |
+| Report Writer | Muse Spark | Write the engineer's brief | A validator rejects any number not in the verified result |
+| Engineer gate | Human | Approve, modify or reject, with a recorded note | The workflow cannot finish without it |
+
+**Why it collaborates this way:** a model is good at reading a photo and proposing ideas, and bad at being the final judge of arithmetic. So models *propose*, code *disposes*. The agent workflow view animates this live, node by node, from real run events (nothing is canned).
+
+## Meta tooling, used in depth
+
+- **Muse Spark 1.3**: vision, text, structured output and reasoning in seven different roles (Scene Check, Vision Reader, Twin Engineer, Scene Designer, Waste Hunter, Critic, Report Writer), each with its own prompt and validation.
+- **SAM 3.1**: segments machines from a text prompt; those regions seed the 3D layout.
+- **Muse Image 1.0**: the demo and gallery photos and the logo.
+- A real run is about 15 model calls (roughly 15 to 25 US cents at list price) and finishes in about a minute and a half.
+
+## Trust: guards and evidence
+
+- **Honest numbers.** The twin's component formulas were checked against **27 published measurements from 8 independent sources** (a pump test, compressed-air fact sheets and a case study, lamp measurements, office cooling studies). Before any fitting: median error **13.6%**, mean 17.6%, worst case 62.5% (cooling-setpoint savings, which we understate). This is a check on published component data, **not a field validation of a plant**, and the Evidence panel says so. Every data point is listed with its source link. Reproduce: `python -m wattloop.validation`.
+- **No runaway API use.** Per-run call and time caps, a global per-minute cap, daily call and spend caps, a kill switch, hard loop limits, at most two active runs, and a cancel button that stops new model calls. Covered by tests (`python -m pytest tests -q`).
+- **Human in the loop.** Every result ends at an engineer decision card with the numbers, the fixes, what to check on site, and a required note for Modify or Reject.
+- **Safe geometry.** Models never write free-form 3D: only validated primitives inside bounds are drawn.
 
 ## Data
-No real facility or personal data. The demo plant, its photo (generated with Muse Image) and its electricity bill are synthetic. Default tariffs, the emission factor and equipment costs are editable assumptions; capex values are placeholders to be replaced by supplier quotes.
+
+No real facility or personal data. The demo plant, its photo (generated with Muse Image) and its electricity bill are synthetic. Tariffs, the emission factor and equipment costs are editable assumptions; capex values are placeholders to be replaced by supplier quotes.
 
 ## Run it
+
 ```bash
 pip install -r requirements.txt
 cp .env.example .env   # add META_API_KEY and META_BASE_URL
@@ -49,5 +114,8 @@ python -m uvicorn server:app --port 8010
 ```
 Without a Meta key the app runs in a labelled demo mode (use the Demo button).
 
-## Limits
-Savings come from a simplified physics model of the facility (pumps, compressed air, lighting, cooling, motors, standby, solar), not from measurements. Small-receiver load/unload and variable-speed compressors, fans, chillers and heat recovery are not modelled. An engineer must verify any recommendation on site.
+## Limits and roadmap
+
+Savings come from a simplified physics model (pumps, compressed air, lighting, cooling, motors, standby, solar), not from measurements. Small-receiver load/unload and variable-speed compressors, fans, chillers and heat recovery are not modelled yet. An engineer must verify any recommendation on site.
+
+**Next:** plant meter and logger data as direct input (the path from screening estimate to field-validated result), Arabic voice input with Muse Voice Transcribe, supplier-quote integration for real costs, and more equipment types.
