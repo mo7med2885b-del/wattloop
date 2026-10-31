@@ -187,11 +187,11 @@ def generate_props(budget: meta.Budget, spec: dict, image: bytes | None, descrip
 
 HALL_SYSTEM = ("You are the 3D Modeller agent of an industrial energy-audit pipeline. The machines of ONE facility are modelled elsewhere. You model EVERYTHING ELSE in the hall so that the scene looks like the photo: "
                "ceiling light fixtures (each one a thin bright box), steel columns and beams, open roof trusses (bars only), window frames (thin bars only), ducts and pipe runs, cable trays, racks and shelving with pallets, tanks and silos, furnaces and ovens, "
-               "workbenches, stacked products, guard rails, walkways, control cabinets, and a few background buildings or tanks outside the hall. Return ONE JSON object and nothing else: "
+               "workbenches, stacked products, guard rails, walkways, control cabinets, and nothing else outside the hall. Return ONE JSON object and nothing else: "
                '{"hall":[{"shape":"box|cylinder|cone|sphere|torus","pos":[x,y,z],"size":[...],"rot":[rx,ry,rz],"color":"#rrggbb","opacity":0.3-1}]}\n'
-               "FRAME (metres): the hall floor is x from -16 to 16 and z from -10 to 10 (z positive toward the viewer, y up, 0 = floor); pos is the CENTRE of each part; you may also place things outside the floor up to x +-32 and z +-18 for the background. "
+               "FRAME (metres): the hall floor is x from -16 to 16 and z from -10 to 10 (z positive toward the viewer, y up, 0 = floor); pos is the CENTRE of each part; everything must stay inside the floor. "
                "The machines stand in these slots, so keep them free: pumps near x -8 z 6; compressor near x 7 z 5.4; production line along x -9 to 9 at z -3.6; AC unit near x 10 z -9.3; standby cabinet near x -13.5 z -3.6 (the layout may move them; stay clear of the middle band). "
-               "NO OVERHEAD STRUCTURE (very important): do not model anything above height 6 except ceiling light fixtures (thin bright boxes hanging at y 6.5 to 7.5). No roof, no roof beams, no trusses, no overhead bars, no ceiling grid. Columns stop at height 6. The hall is OPEN to the sky. "
+               "NOTHING OUTSIDE THE FACTORY: no trees, plants, bushes, cars, people, roads, fences, background buildings or tanks outside the floor area; everything you model stands INSIDE the floor (x -16 to 16, z -10 to 10). Do not model windows or window frames either.  do not model anything above height 6 except ceiling light fixtures (thin bright boxes hanging at y 6.5 to 7.5). No roof, no roof beams, no trusses, no overhead bars, no ceiling grid. Columns stop at height 6. The hall is OPEN to the sky. "
                "OPEN FRAME RULE: the hall floor area is an open space with standing structure only. NEVER model a roof, a ceiling, a floor slab or any wall or solid panel: no box wider than 6 and deeper than 6 that is thin, no big flat sheet of any kind. Build structure only from thin bars (columns up to height 6, rails, braces, low ducts and pipes, each under 0.6 thick) so that the machines are always fully visible from above and from the side. Windows are drawn as thin frames, never as panes. "
                "Use 70 to 130 parts, biggest and most visible structures first. SIZES: box [width,height,depth]; cylinder [radius,height]; cone [radius,height]; sphere [radius]; torus [ring radius, tube radius]. rot in degrees (a cylinder stands upright; rot [0,0,90] lays it along x; rot [90,0,0] along z). "
                "Nothing floats: every part touches the floor or another part (columns stop at height 6, lights hang on thin rods at 6.5 to 7.5). Match the photo: the number and spacing of columns and lights, the colours, the materials (stainless light grey #c3cbd4, painted steel as seen, brick red #8a3b2a), glass with opacity 0.35 to 0.6. "
@@ -246,6 +246,37 @@ def _open_top(p: dict) -> dict | None:
     return p
 
 
+def _extent(p: dict) -> tuple[float, float]:
+    """(height, longest horizontal size) of a part."""
+    if p["shape"] == "box":
+        return p["size"][1], max(p["size"][0], p["size"][2])
+    if p["shape"] in ("cylinder", "cone"):
+        return (p["size"][1], 2 * p["size"][0]) if not p.get("rot") else (2 * p["size"][0], p["size"][1])
+    return 2 * p["size"][0], 2 * p["size"][0]
+
+
+def _declutter(p: dict) -> dict | None:
+    """Keep the view clear: nothing tall stands between the viewer and the machines (front band z > 3.5), no long overhead rails,
+    nothing outside the floor except low-profile background behind the hall (z < -11), no big blocks or trees at the edges."""
+    x, y, z = p["pos"]
+    h, length = _extent(p)
+    if _is_light(p):
+        return p
+    if abs(x) > 17.5 or z > 11.0:
+        return None
+    if z < -11.0 and h > 8:
+        return None
+    if z > 3.5 and y + h / 2 > 1.4:
+        return None
+    if p["shape"] == "box" and length > 8 and y > 1.5:
+        return None
+    if p["shape"] == "box" and length > 3.5 and h < 0.3 and y < 0.6:
+        return None   # flat strips lying on the floor (leftover window sills and rails) only clutter the view
+    if p["shape"] == "sphere" and p["size"][0] > 0.8:
+        return None
+    return p
+
+
 def generate_hall(budget: meta.Budget, spec: dict, image: bytes | None, description: str, obs: dict | None, boxes: list[dict]) -> tuple[list[dict], dict]:
     """Full-AI scene: Muse Wonder designs lights, columns, ducts, racks, tanks, furnaces and the background too (validated parts, no templates)."""
     usd = 0.0
@@ -258,7 +289,7 @@ def generate_hall(budget: meta.Budget, spec: dict, image: bytes | None, descript
             continue
         usd += r["usd"]
         plist = (r["json"] or {}).get("hall")
-        got = [q for q in (_open_top(p) for p in _clean(plist, 32.0, 18.0, 10.0, 150, allow_anim=False, limit=150) if not _is_panel(p)) if q]
+        got = [r for r in (_declutter(q) for q in (_open_top(p) for p in _clean(plist, 32.0, 18.0, 10.0, 150, allow_anim=False, limit=150) if not _is_panel(p)) if q) if r]
         if len(got) >= 20:
             return got, {"usd": usd, "model": r["model"]}
     return [], {"usd": usd, "model": None}

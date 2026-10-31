@@ -461,27 +461,42 @@ def scene_designer(run: Run, spec: dict, obs: dict, boxes: list[dict]):
             raise
         except Exception:  # noqa: BLE001  (the template shapes stay)
             return {}, {"usd": 0.0}
-    with ThreadPoolExecutor(1) as ex:
-        fut = ex.submit(shapes)
+    def hall():
+        """The rest of the scene (lights, racks, tanks, furnaces, background): designed by the model too, open frame only (no roof, walls or columns)."""
+        if not meta.available() or meta.env("PARTS_3D", "1") != "1":
+            return [], {"usd": 0.0}
+        try:
+            res = parts.generate_hall(run.budget, spec, run.image, run.case["description"], obs, boxes)
+            run.calls += 1 if res[1].get("usd") else 0
+            return res
+        except meta.BudgetExceeded:
+            raise
+        except Exception:  # noqa: BLE001
+            return [], {"usd": 0.0}
+    with ThreadPoolExecutor(2) as ex:
+        fut, fut_hall = ex.submit(shapes), ex.submit(hall)
         out, info = _layout_designer(run, spec, obs, boxes)
-        props_got, props_info = {}, {"usd": 0.0}
-        if meta.available() and meta.env("PARTS_3D", "1") == "1":
-            try:
-                props_got, props_info = parts.generate_props(run.budget, spec, run.image, run.case["description"], obs, boxes)   # big furnaces, ovens, silos: after the layout knows where they stand
-                run.calls += 1 if props_info.get("usd") else 0
-            except meta.BudgetExceeded:
-                raise
-            except Exception:  # noqa: BLE001
-                props_got = {}
         got, pinfo = fut.result()
+        hall_parts, hinfo = fut_hall.result()
+    props_got, props_info = {}, {"usd": 0.0}
+    if hall_parts:
+        spec["hall"] = hall_parts
+    elif meta.available() and meta.env("PARTS_3D", "1") == "1":   # the hall call failed: the big props are designed instead (older path)
+        try:
+            props_got, props_info = parts.generate_props(run.budget, spec, run.image, run.case["description"], obs, boxes)
+            run.calls += 1 if props_info.get("usd") else 0
+        except meta.BudgetExceeded:
+            raise
+        except Exception:  # noqa: BLE001
+            props_got = {}
     got = {**got, **props_got}
-    pinfo = {"usd": pinfo.get("usd", 0.0) + props_info.get("usd", 0.0), "model": pinfo.get("model") or props_info.get("model")}
+    pinfo = {"usd": pinfo.get("usd", 0.0) + props_info.get("usd", 0.0) + hinfo.get("usd", 0.0), "model": pinfo.get("model") or hinfo.get("model") or props_info.get("model")}
     n = parts.apply_parts(spec, got)
     info = {**info, "usd": info.get("usd", 0.0) + pinfo.get("usd", 0.0), "calls": info.get("calls", 0) + (1 if pinfo.get("usd") else 0)}
     out["shapes_by_model"] = n
     if n:
         info["model"] = pinfo.get("model") or info.get("model")   # the 3D shapes are the main work of this step
-        info["note"] = f"{n} machine shapes designed by {(pinfo.get('model') or 'the model').replace('muse-', 'Muse ').replace('-1.0', '')}"
+        info["note"] = f"{n} machines" + (f" and a {len(spec['hall'])}-part hall" if spec.get("hall") else "") + f" designed by {(pinfo.get('model') or 'the model').replace('muse-', 'Muse ').replace('-1.0', '')}"
     return out, info
 
 

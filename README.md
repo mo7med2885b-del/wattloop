@@ -63,7 +63,7 @@ A synthetic test (200 random plants where the true saving is known, **not real p
 
 ## See it work
 
-<p align="center"><img src="assets/screens/hero-3d.jpg" alt="The 3D twin of the demo food plant: blue pump skid, yellow compressor with its receiver tank, conveyor line with mixers and an oven" width="100%"><br><sub><b>The 3D twin, designed by Muse Wonder.</b> Every machine is modelled from simple parts it writes; code checks and draws them.</sub></p>
+<p align="center"><img src="assets/screens/hero-3d.jpg" alt="The 3D twin of the demo food plant: blue pump skid, yellow compressor with its receiver tank, conveyor line with mixers and an oven" width="100%"><br><sub><b>Everything in the 3D twin is designed by Muse models.</b> Muse Wonder designs every machine, structure and prop as simple parts and Muse Spark lays them out; code only checks the parts, draws them and lays the floor.</sub></p>
 
 <p align="center"><img src="assets/screens/focus.jpg" alt="Fly-in on the pump skid with its live power, waste warning and speed gauge" width="100%"><br><sub><b>Click any machine.</b> The view flies in and shows the live power, the waste (a throttled valve on the process pumps here) and where the parameter sits against its safe range. The photo on the left shows what Muse Spark named and SAM 3.1 outlined. A real run: the shapes were designed by Muse Wonder.</sub></p>
 
@@ -108,7 +108,7 @@ flowchart TD
 | Segmenter | SAM 3.1 | Outline each machine in the photo | Falls back to no overlay |
 | Twin Engineer | Muse Spark | Write the facility as structured JSON | Clamped to the twin's schema in code |
 | Scene Designer | Muse Spark (sees the photo) | Place machines, scale them, add props from the photo | Bounds, spacing and primitive limits enforced; falls back to a layout from the SAM boxes |
-| 3D Modeller | Muse Wonder (sees the photo; Muse Spark as fallback) | Designs each machine's shape as 14-30 simple parts (boxes, cylinders, cones, spheres, tori) with positions, sizes and colours | Parts are data, never code: shape, size, position inside the machine's floor slot, colour and part count are validated; falls back to a built-in shape |
+| 3D Modeller | Muse Wonder (sees the photo; Muse Spark as fallback) | Designs every machine and the rest of the hall (racks, tanks, furnaces, lights) as simple parts (boxes, cylinders, cones, spheres, tori) with positions, sizes and colours, as an open frame with no roof, walls or columns | Parts are data, never code: shape, size, position inside the machine's floor slot, colour and part count are validated; falls back to a built-in shape |
 | Calibration loop | Code + Muse Spark | Match the twin to the real bill (under 5% error) | Hard cap of 5 iterations; deterministic fallback |
 | Waste Hunter | Muse Spark | Propose fixes from a catalog, aggressively first | Every proposal is simulated, never trusted |
 | **Fix Verifier** | **Code** | Apply each fix to the twin, reject impractical ones (3% leak floor, 26 C limit, 30% minimum drive speed, solar size cap) | Rejections go back to the hunter with the reason |

@@ -68,3 +68,14 @@ def test_open_top_removes_overhead_structure_keeps_lights_and_trims_columns():
     assert parts._open_top(light) == light and parts._open_top(beam) is None and parts._open_top(truss) is None
     c = parts._open_top(column)
     assert c and c["pos"][1] + c["size"][1] / 2 <= parts.HALL_TOP + 0.01
+
+
+def test_declutter_keeps_the_view_clear():
+    rail = {"shape": "box", "pos": [0, 4, 0], "size": [20, 0.2, 0.2], "color": "#444444"}
+    window = {"shape": "box", "pos": [0, 2, 6], "size": [0.2, 3, 3], "color": "#cccccc"}
+    low = {"shape": "box", "pos": [0, 0.4, 6], "size": [1, 0.8, 1], "color": "#cccccc"}
+    outside = {"shape": "box", "pos": [24, 2, 0], "size": [5, 4, 5], "color": "#cccccc"}
+    tree = {"shape": "sphere", "pos": [-17, 2, 5], "size": [1.4], "color": "#2f8f3a"}
+    rack = {"shape": "box", "pos": [10, 1, -6], "size": [2, 2, 1], "color": "#cccccc"}
+    assert all(parts._declutter(p) is None for p in (rail, window, outside, tree))
+    assert parts._declutter(low) == low and parts._declutter(rack) == rack

@@ -243,6 +243,8 @@ def _demo_design(spec: dict) -> None:
         if c["id"] in d.get("components", {}):
             c["design"] = d["components"][c["id"]]
     spec["extras"] = d.get("extras", [])
+    if d.get("hall"):
+        spec["hall"] = d["hall"]
 
 
 def _random_demo(item: dict) -> dict:

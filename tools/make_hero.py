@@ -13,7 +13,7 @@ from wattloop import demo, pipeline, scene  # noqa: E402
 ROOT = Path(__file__).resolve().parent.parent
 if sys.argv[1] == "--save":
     spec = json.loads((ROOT / f"static/dev/hero_{sys.argv[2]}.json").read_text())
-    out = {"components": {c["id"]: c["design"] for c in spec["components"] if c.get("design")}, "extras": spec.get("extras", [])}
+    out = {"components": {c["id"]: c["design"] for c in spec["components"] if c.get("design")}, "extras": spec.get("extras", []), "hall": spec.get("hall", [])}
     (ROOT / "wattloop/data/demo_design.json").write_text(json.dumps(out))
     print("saved", {k: len(v.get("parts", [])) for k, v in out["components"].items()}, len(out["extras"]), "extras", sum(1 for x in out["extras"] if x.get("parts")), "with parts")
     sys.exit()
