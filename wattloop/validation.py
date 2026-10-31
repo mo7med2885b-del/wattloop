@@ -172,6 +172,17 @@ def holdout() -> dict | None:
     return {"rows": rows, **summary(rows), "sources": len({r["url"] for r in rows})} if rows else None
 
 
+REALIZATION = {
+    "title": "Real industrial programs: verified savings divided by predicted savings (realization rate)",
+    "source": "Energy Trust of Oregon, Production Efficiency program evaluation, projects 2003-2005 (Table I, p.7)",
+    "url": "https://energytrust.org/wp-content/uploads/2016/11/071214_2003-2005_PE_Evaluation.pdf",
+    "opened_and_read": True,
+    "overall": 92.8,
+    "rows": [("Compressed air", 99.95), ("HVAC", 100.0), ("Lighting", 93.2), ("Refrigeration", 97.23), ("Process fans", 84.78), ("Motors", 77.4), ("Process pumping", 63.81)],
+    "note": "Real plants, evaluated after the fact, in Oregon (US). It says how far program PREDICTIONS were from VERIFIED results, so our estimates are likely to be similarly high by up to a third for pumps and motors. It does not test our formulas, and the number of projects per row was not checked. Another study (Itron, ACEEE 2011) found one industrial program as low as 0.49.",
+}
+
+
 def input_benchmark() -> dict:
     """Synthetic test of how input quality changes the error of the predicted saving (random plants, known truth; NOT real plants)."""
     from . import benchmark
@@ -182,7 +193,7 @@ def input_benchmark() -> dict:
 def run() -> dict:
     leg, cur = _rows("legacy"), _rows("current")
     return {"legacy": {"rows": leg, **summary(leg)}, "current": {"rows": cur, **summary(cur)},
-            "independent_sources": 8, "holdout": holdout(), "input_benchmark": input_benchmark(), "provenance": [dict(zip(("item", "value", "basis", "status"), p)) for p in PROVENANCE], "limits": LIMITS, "note": "Component models vs published data only. Not a field validation. 'current' constants were fitted on the same points (in-sample)."}
+            "independent_sources": 8, "holdout": holdout(), "input_benchmark": input_benchmark(), "realization": REALIZATION, "provenance": [dict(zip(("item", "value", "basis", "status"), p)) for p in PROVENANCE], "limits": LIMITS, "note": "Component models vs published data only. Not a field validation. 'current' constants were fitted on the same points (in-sample)."}
 
 
 if __name__ == "__main__":

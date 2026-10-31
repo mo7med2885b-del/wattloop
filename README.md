@@ -63,7 +63,7 @@ A synthetic test (200 random plants where the true saving is known, **not real p
 
 ## See it work
 
-<p align="center"><img src="assets/screens/hero-3d.jpg" alt="The 3D twin of the demo food plant: blue pump skid, yellow compressor with its receiver tank, conveyor line with mixers and an oven" width="100%"><br><sub><b>The 3D twin, designed by Muse Wonder.</b> Every machine is built from 30 to 40 simple parts that Muse Wonder wrote as data; code checks them and Three.js draws them. Pump skid with valves, compressor with receiver tank, conveyor line with mixers and an oven. Rendered at 4000 x 2250.</sub></p>
+<p align="center"><img src="assets/screens/hero-3d.jpg" alt="The 3D twin of the demo food plant: blue pump skid, yellow compressor with its receiver tank, conveyor line with mixers and an oven" width="100%"><br><sub><b>The 3D twin, designed by Muse Wonder.</b> Every machine is modelled from simple parts it writes; code checks and draws them.</sub></p>
 
 <p align="center"><img src="assets/screens/focus.jpg" alt="Fly-in on the pump skid with its live power, waste warning and speed gauge" width="100%"><br><sub><b>Click any machine.</b> The view flies in and shows the live power, the waste (a throttled valve on the process pumps here) and where the parameter sits against its safe range. The photo on the left shows what Muse Spark named and SAM 3.1 outlined. A real run: the shapes were designed by Muse Wonder.</sub></p>
 

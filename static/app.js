@@ -371,11 +371,15 @@ const App = (() => {
     const inp = IB ? `<div class="evsec">How much the inputs matter (synthetic test)<small>median error of the predicted saving; ${esc(IB.seeds)}</small></div>
       <div class="evh">${Object.keys(lab).filter((k) => IB.results[k]).map((k) => `<div><b>${IB.results[k].median}%</b><span>${lab[k]}</span></div>`).join("")}</div>
       <div class="evwhy"><div><b>What this is</b>${esc(IB.note)} Reproduce: <code>python tools/benchmark_inputs.py 1000 200</code>.</div></div>` : "";
+    const RZ = d.realization, real = RZ ? `<div class="evsec">What real plants showed<small>${esc(RZ.title)}</small></div>
+      <div class="evh"><div><b>${RZ.overall}%</b><span>overall realization rate</span></div>${RZ.rows.map((r) => `<div><b>${r[1]}%</b><span>${esc(r[0])}</span></div>`).join("")}</div>
+      <div class="evwhy"><div><b>Source and caveat</b><a href="${esc(RZ.url)}" target="_blank" rel="noopener">${esc(RZ.source)}</a>. ${esc(RZ.note)}</div></div>` : "";
     box.innerHTML = `
       <div class="evh"><div><b>${L.median_abs_err_pct}%</b><span>median error against published measurements (first version, before any fitting)</span></div><div><b>${L.mean_abs_err_pct}%</b><span>mean error</span></div><div><b>${L.n}</b><span>comparisons from ${d.independent_sources} independent published sources</span></div><div><b>${L.worst_abs_err_pct}%</b><span>worst case: HVAC setpoint savings (we understate them)</span></div></div>
       <div class="evwhy"><div><b>What was tested</b>Each formula in the twin (pump power, compressor part-load, leak repair, LED power, cooling setpoint) was compared with a number measured or reported by someone else.</div><div><b>What the percentages mean</b>Error = (our model - published value) / published value. A median of ${L.median_abs_err_pct}% means half of the comparisons were within ${L.median_abs_err_pct}%.</div><div><b>What this is not</b>It is not a test on a real plant. No real before/after plant data was found. After fitting the constants on the same points the in-sample median is ${C.median_abs_err_pct}%; that figure is not accuracy and we do not quote it.</div></div>
       ${hold}
       ${inp}
+      ${real}
       <div class="evsec">Result by component (first-version check)</div>
       <table class="evt"><tr><th>Component</th><th>n</th><th>Median error, first version</th><th>In-sample after fitting</th></tr>${comps.map((k) => `<tr><td>${k}</td><td class="num">${L.by_component[k].n}</td><td class="num ${L.by_component[k].median_abs_err_pct > 25 ? "bad" : ""}">${L.by_component[k].median_abs_err_pct}%</td><td class="num">${(C.by_component[k] || {}).median_abs_err_pct}%</td></tr>`).join("")}</table>
       <div class="evsec">All ${L.n} data points<small>published value, our first-version model, error, and the source (links open the original)</small></div>
