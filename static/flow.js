@@ -141,7 +141,7 @@ const WF = (() => {
       case "vision": return (o.equipment ? o.equipment.length : 0) + " ITEMS";
       case "segment": return (o.boxes ? o.boxes.length : 0) + " REGIONS";
       case "engineer": return (o.spec ? o.spec.components.length : 0) + " PARTS";
-      case "design": return ((o.design && o.design.extras) ? o.design.extras.length : 0) + " PROPS";
+      case "design": { const sp = o.spec || {}; return ((sp.hall && sp.hall.length) || 0) + ((sp.components || []).reduce((n, c) => n + ((c.design && c.design.parts) ? c.design.parts.length : 0), 0)) + " PARTS"; }
       case "calibrate": return "ERR " + (o.final_err_pct > 0 ? "+" : "") + o.final_err_pct + "%";
       case "hunt": return (o.plan ? o.plan.length : 0) + " FIXES";
       case "verify": return (o.accepted || 0) + " OK · " + (o.rejected || 0) + " NO";

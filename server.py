@@ -231,6 +231,11 @@ def _demo_parts(spec: dict, pid: str) -> None:
     f = Path(__file__).parent / "wattloop" / "data" / "demo_parts.json"
     if f.exists():
         parts.apply_parts(spec, json.loads(f.read_text(encoding="utf-8")).get(pid, {}))
+    fh = Path(__file__).parent / "wattloop" / "data" / "demo_halls.json"
+    if fh.exists():
+        hall = json.loads(fh.read_text(encoding="utf-8")).get(pid)
+        if hall:
+            spec["hall"] = hall
 
 
 def _demo_design(spec: dict) -> None:
