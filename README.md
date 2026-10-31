@@ -65,7 +65,7 @@ A synthetic test (200 random plants where the true saving is known, **not real p
 
 <p align="center"><img src="assets/screens/hero-3d.jpg" alt="The 3D twin of the demo food plant: blue pump skid, yellow compressor with its receiver tank, conveyor line with mixers and an oven" width="100%"><br><sub><b>The 3D twin, designed by Muse Wonder.</b> Every machine is built from 30 to 40 simple parts that Muse Wonder wrote as data; code checks them and Three.js draws them. Pump skid with valves, compressor with receiver tank, conveyor line with mixers and an oven. Rendered at 4000 x 2250.</sub></p>
 
-<p align="center"><img src="assets/screens/focus.jpg" alt="Fly-in on the compressor with leak gauge" width="100%"><br><sub><b>Click any machine.</b> The view flies in, shows the live power, the waste (a 25% air leak here) and where the parameter sits against its safe range. Dashboard widgets, an accelerated day cycle and hourly load update with it.</sub></p>
+<p align="center"><img src="assets/screens/focus.jpg" alt="Fly-in on the pump skid with its live power, waste warning and speed gauge" width="100%"><br><sub><b>Click any machine.</b> The view flies in and shows the live power, the waste (a throttled valve on the process pumps here) and where the parameter sits against its safe range. The photo on the left shows what Muse Spark named and SAM 3.1 outlined. A real run: the shapes were designed by Muse Wonder.</sub></p>
 
 - **Different image, different plant:** the layout, proportions and props come from the photo or description.
 - **Click the photo** to see exactly what Muse Spark named and what SAM 3.1 located.
@@ -117,7 +117,7 @@ flowchart TD
 | Report Writer | Muse Spark | Write the engineer's brief | A validator rejects any number not in the verified result |
 | Engineer gate | Human | Approve, modify or reject, with a recorded note | The workflow cannot finish without it |
 
-<p align="center"><img src="assets/screens/workflow.jpg" alt="The agent workflow after a finished run" width="100%"><br><sub><b>The agent workflow, live.</b> Every node lights up from a real run event: models in orange-outlined cards, code-only steps marked "no model". The left panel shows the 3D plant as it is built. When the plan is verified, a decision card asks the engineer to approve, modify or reject.</sub></p>
+<p align="center"><img src="assets/screens/workflow.jpg" alt="The agent workflow after a finished real run" width="100%"><br><sub><b>The agent workflow, live.</b> Every node lights up from a real run event: model, result and timing for each agent (the 3D Designer is Muse Wonder), the calibration error against the bill, rejected fixes, and the engineer checkpoint at the end. This is a real run of the Delta Foods demo plant.</sub></p>
 
 **Why it collaborates this way:** a model is good at reading a photo and proposing ideas, and bad at being the final judge of arithmetic. So models *propose*, code *disposes*. The agent workflow view animates this live, node by node, from real run events (nothing is canned).
 

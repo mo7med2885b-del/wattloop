@@ -61,7 +61,7 @@ const Report = (() => {
     doc.setFontSize(7.5); doc.setTextColor(...MUT); doc.text("Facility photo (as provided)", M, y + ih + 4); doc.text("3D twin today: orange outlines mark waste", M + iw + 6, y + ih + 4); y += ih + 9;
     if (snapAfter) { doc.addImage(snapAfter, "JPEG", M, y, iw, ih); doc.text("3D twin after the verified fixes: green outlines mark fixed machines", M, y + ih + 4); }
     doc.setFontSize(8); doc.setTextColor(40, 40, 40);
-    const note = doc.splitTextToSize("How to read this: the twin was written by Muse Spark from the photo and description, then calibrated to the monthly bill. A code simulator tested each fix and rejected impractical ones before this plan was produced.", iw);
+    const note = doc.splitTextToSize("How to read this: the twin was written by Muse Spark from the photo and description, the 3D machine shapes were designed by Muse Wonder (code checked every part), then the twin was calibrated to the monthly bill. A code simulator tested each fix and rejected impractical ones before this plan was produced.", iw);
     doc.text(note, M + iw + 6, y + 6);
 
     // ---------------- page 2: problems, cost, timing
