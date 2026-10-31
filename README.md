@@ -124,7 +124,7 @@ flowchart TD
 ## Meta tooling, used in depth
 
 - **Muse Spark 1.3**: vision, text, structured output and reasoning in seven different roles (Scene Check, Vision Reader, Twin Engineer, Scene Designer, Waste Hunter, Critic, Report Writer), each with its own prompt and validation.
-- **Muse Wonder**: the most capable model, used as the 3D Modeller: it designs each machine's shape as simple parts, which code validates and draws.
+- **Muse Wonder**: the most capable model, used as the 3D Modeller. It designs every machine, structure and prop of the scene as simple parts (an open frame: no roof, walls or columns); code checks the parts and draws them.
 - **SAM 3.1**: segments machines from a text prompt; those regions seed the 3D layout.
 - **Muse Image 1.0**: the demo and gallery photos and the logo.
 - A real run is about 16 model calls (roughly 25 to 40 US cents at list price, the 3D Modeller being the largest part) and finishes in about a minute and a half.
@@ -133,7 +133,7 @@ flowchart TD
 
 - **No runaway API use.** Per-run call and time caps, a global per-minute cap, daily call and spend caps, a kill switch, hard loop limits, at most two active runs, and a cancel button that stops new model calls. Covered by tests (`python -m pytest tests -q`).
 - **Human in the loop.** Every result ends at an engineer decision card with the numbers, the fixes, what to check on site, and a required note for Modify or Reject.
-- **Safe geometry.** Muse Spark designs the 3D as data (lists of simple parts), never as code. Only validated parts inside each machine's slot are drawn by Three.js, so a bad model answer cannot break the scene.
+- **Safe geometry.** The 3D is designed entirely by Muse models, as data (lists of simple parts), never as code. Only validated parts inside the floor are drawn, so a bad model answer cannot break the scene or hide the machines.
 
 ## Evidence: the formulas against published measurements
 
