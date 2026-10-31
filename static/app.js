@@ -95,7 +95,7 @@ const App = (() => {
     const mk = (id, label) => { const b = document.createElement("button"); b.textContent = label; b.className = (Factory.focused || "") === (id || "") ? "on" : ""; b.onclick = () => Factory.focus(id); box.append(b); };
     mk(null, "ALL"); spec.components.forEach((c) => mk(c.id, TITLES[c.type] || c.type.toUpperCase()));
   }
-  function buildTimeline() { const t = $("#timeline"); t.innerHTML = ""; for (let h = 0; h < 24; h++) { const d = document.createElement("div"); d.className = "tk"; d.textContent = String(h).padStart(2, "0"); t.append(d); } }
+  function buildTimeline() { const t = $("#timeline"); t.innerHTML = ""; for (let h = 0; h < 24; h++) { const d = document.createElement("div"); d.className = "tk"; d.textContent = String(h).padStart(2, "0"); d.title = "Click to jump to this hour of the simulated day (click again to resume)"; d.style.cursor = "pointer"; d.addEventListener("click", () => { if (Factory.isPaused() && Math.floor(Factory.getHour ? Factory.getHour() : -1) === h) { Factory.setPaused(false); return; } Factory.setHour(h); Factory.setPaused(true); }); t.append(d); } }
   function markTimeline(hi) { const spec = Factory.getSpec(), sh = spec ? spec.shift : { start: 6, end: 22 }; [...$("#timeline").children].forEach((d, h) => { d.classList.toggle("on", h === hi); d.classList.toggle("shift", h >= sh.start && h < sh.end); }); }
   const RANGES = { pump: ["Flow demand", "%", 30, 100, (c) => c.flow_demand * 100, "variable-speed drives need at least 30%"], compressor: ["Leak share", "%", 0, 40, (c) => c.leak * 100, "practical floor about 3%"], hvac: ["Setpoint", "°C", 16, 30, (c) => c.setpoint_c, "verifier limit 26 °C"],
     lighting: ["After-hours on", "h", 0, 8, (c) => (c.controls ? 0 : c.after_hours_h || 0), "controls switch lights off"], standby: ["Standby load", "kW", 0, 12, (c) => (c.auto_off ? 0 : c.kw), "auto shut-down removes it"], motors: ["Load", "%", 20, 100, (c) => c.load_factor * 100, "production load, not changed"], pv: ["Array", "kWp", 0, 80, (c) => c.kwp, "capped by daytime load"] };
@@ -135,7 +135,7 @@ const App = (() => {
     WF.apply(ev);
     switch (ev.type) {
       case "run_start": detect.obs = null; detect.boxes = []; updateBadge(); S.caseName = ev.case.name; cost = 0; calls = 0; rej = 0; calib.twin = []; S.result = null; $("#calchart").innerHTML = ""; $("#fixes tbody").innerHTML = ""; $("#alog").innerHTML = ""; $("#decided").textContent = ""; $("#summary").textContent = "Running…"; $("#critic").textContent = ""; radar(null); alog("Run started"); caption("Reading your facility", "Photo, description and bill received."); break;
-      case "node_start": stepMark(ev.node, "act"); { const m = { scene: ["Checking the image", "Is it clearly a factory? Muse Spark vision looks first."], vision: ["Reading the equipment", "Muse Spark vision lists machines and waste signs."], segment: ["Locating equipment", "SAM 3.1 outlines each machine in the photo."], engineer: ["Building the twin", "Muse Spark writes a first-guess model as structured data."], calibrate: ["Calibrating to your bill", "Adjusting the uncertain parameters until the twin matches the bill."], hunt: ["Testing fixes in the twin", "Aggressive proposals first; code rejects what is impractical."], critic: ["Trying to refute the savings", "The Critic attacks the claim; code adds a sensitivity range."], report: ["Writing the engineer brief", "Only verified numbers are allowed in the text."] }[ev.node]; if (m) caption(...m); break; }
+      case "node_start": stepMark(ev.node, "act"); { const m = { scene: ["Checking the image", "Is it clearly a factory? Muse Spark vision looks first."], vision: ["Reading the equipment", "Muse Spark vision lists machines and waste signs."], segment: ["Locating equipment", "SAM 3.1 outlines each machine in the photo."], engineer: ["Building the twin", "Muse Spark writes a first-guess model as structured data."], design: ["Designing the 3D scene", "Muse Spark lays out the plant; Muse Wonder designs each machine's shape; code checks every part."], calibrate: ["Calibrating to your bill", "Adjusting the uncertain parameters until the twin matches the bill."], hunt: ["Testing fixes in the twin", "Aggressive proposals first; code rejects what is impractical."], critic: ["Trying to refute the savings", "The Critic attacks the claim; code adds a sensitivity range."], report: ["Writing the engineer brief", "Only verified numbers are allowed in the text."] }[ev.node]; if (m) caption(...m); break; }
       case "node_done":
         stepMark(ev.node, "done");
         if (ev.node === "engineer" && ev.output && ev.output.spec) { renderBuild(ev.output.spec, "engineer draft", true); calSpec = ev.output.spec; }
@@ -234,9 +234,11 @@ const App = (() => {
   }
   // fresh build: clear the plant, show the loader, and let the machines assemble when the first twin arrives
   function showLoader() {
+    loaderWasPaused = Factory.isPaused(); Factory.setPaused(true); Factory.setHour(6);   // the simulated day stands still while the twin is being built
     const L = $("#loader"); L.hidden = false; L.classList.remove("out"); L.querySelectorAll("li").forEach((li) => li.className = ""); $("#photo").parentElement.classList.add("scanning");
   }
-  function hideLoader() { const L = $("#loader"); if (L.hidden) return; L.classList.add("out"); $("#photo").parentElement.classList.remove("scanning"); setTimeout(() => { if (L.classList.contains("out")) L.hidden = true; }, 520); }
+  let loaderWasPaused = false;
+  function hideLoader() { const L = $("#loader"); if (L.hidden) return; Factory.setPaused(loaderWasPaused); L.classList.add("out"); $("#photo").parentElement.classList.remove("scanning"); setTimeout(() => { if (L.classList.contains("out")) L.hidden = true; }, 520); }
   function stepMark(node, cls) { const li = document.querySelector(`#lsteps li[data-n="${node}"]`); if (li) li.className = cls; }
   function resetForBuild() {
     const empty = { name: "", shift: { start: 6, end: 22, days_per_week: 6 }, components: [] }, z = Array(24).fill(0);
