@@ -63,6 +63,8 @@ def test_open_top_removes_overhead_structure_keeps_lights_and_trims_columns():
     beam = {"shape": "box", "pos": [0, 7.8, 0], "size": [20, 0.4, 0.4], "color": "#555555"}
     truss = {"shape": "box", "pos": [0, 6.0, 0], "size": [30, 0.3, 0.3], "color": "#555555"}
     column = {"shape": "box", "pos": [5, 4.5, 5], "size": [0.4, 9, 0.4], "color": "#555555"}
+    assert parts._open_top(column) is None   # tall thin posts are dropped
+    column = {"shape": "box", "pos": [5, 2.5, 5], "size": [2.0, 5, 2.0], "color": "#555555"}
     assert parts._open_top(light) == light and parts._open_top(beam) is None and parts._open_top(truss) is None
     c = parts._open_top(column)
     assert c and c["pos"][1] + c["size"][1] / 2 <= parts.HALL_TOP + 0.01

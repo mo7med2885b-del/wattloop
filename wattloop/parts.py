@@ -225,6 +225,8 @@ def _open_top(p: dict) -> dict | None:
     """No overhead structure: ceiling light fixtures stay, everything that hangs above the open top is dropped, columns are cut to the top."""
     if _is_light(p):
         return p
+    if p["shape"] in ("box", "cylinder") and p["size"][1] > 3.0 and max(p["size"][0], p["size"][-1] if p["shape"] == "box" else p["size"][0]) < 1.2 and p["shape"] != "sphere":
+        return None   # tall thin standing posts (columns) hide the machines in the 3D view: not drawn
     y, h = p["pos"][1], (p["size"][1] if p["shape"] in ("box", "cylinder", "cone") else 2 * p["size"][0])
     bottom, top = y - h / 2, y + h / 2
     if bottom >= HALL_TOP - 0.4:

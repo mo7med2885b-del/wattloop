@@ -170,6 +170,9 @@ python -m uvicorn server:app --port 8010
 
 ## Limits and roadmap
 
+**Real-world check.** Published evaluations of real industrial programs verify about 93% of predicted savings overall (Energy Trust of Oregon, 578 projects), but individual measures range from about 0.47 to 1.0 (for example compressed air 0.47 and variable-frequency drives 0.66 in a PG&E evaluation by Itron). Treat WattLoop's savings as an **upper-end screening estimate** that an engineer verifies on site. The Evidence panel lists these sources.
+
+
 Savings come from a simplified physics model (pumps, compressed air, lighting, cooling, motors, standby, solar), not from measurements. Small-receiver load/unload and variable-speed compressors, fans, chillers and heat recovery are not modelled yet. An engineer must verify any recommendation on site.
 
 **Next:** plant meter and logger data as direct input (the path from screening estimate to field-validated result), Arabic voice input with Muse Voice Transcribe, supplier-quote integration for real costs, and more equipment types.
