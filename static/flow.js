@@ -215,7 +215,7 @@ const WF = (() => {
   const STEPS = ["scene", "vision", "segment", "engineer", "design"];
   function stepMark(n, cls) { const li = document.querySelector(`#wfSteps li[data-n="${n}"]`); if (li) li.className = cls; }
   const money = (n) => Math.round(+n || 0).toLocaleString("en-US");
-  const fixTitle = (f) => ({ vsd_pump: "Variable-speed drive on pumps", repair_leaks: "Repair compressed-air leaks", led_retrofit: "LED lighting retrofit", lighting_controls: "Lighting controls", hvac_setpoint: "Raise cooling setpoint", standby_shutdown: "Auto shut-down of idle machines", solar_pv: "Rooftop solar PV" }[f.type] || f.type);
+  const fixTitle = (f) => ({ vsd_pump: "Variable-speed drive on pumps", repair_leaks: "Repair compressed-air leaks", vsd_compressor: "Variable-speed compressor", led_retrofit: "LED lighting retrofit", lighting_controls: "Lighting controls", hvac_setpoint: "Raise cooling setpoint", standby_shutdown: "Auto shut-down of idle machines", solar_pv: "Rooftop solar PV" }[f.type] || f.type);
   function cpOpen() {
     const r = gateResult; if (!r) return; const e = r.evaluation, a = r.arbiter, d = r.plan_detail || [];
     $$("cpLead").textContent = `WattLoop tested ${r.plan.length} fixes in the twin and kept the ones that passed the safety checks. Nothing is final until you decide. All figures are simulated estimates, not measurements.`;

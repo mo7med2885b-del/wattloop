@@ -120,7 +120,7 @@ def validate_spec(raw: dict, shift: dict) -> dict:
             out.update(count=int(num("count", 1)), rated_kw=num("rated_kw", 15), hours=min(n_shift, num("hours", n_shift)),
                        flow_demand=num("flow_demand", 0.8), vsd=bool(c.get("vsd", False)), static_share=min(1.0, max(0.0, float(c.get("static_share", 0.3) or 0.3))))
         elif t == "compressor":
-            out.update(rated_kw=num("rated_kw", 37), hours=min(n_shift, num("hours", n_shift)), air_demand=num("air_demand", 0.6), leak=num("leak", 0.1), control=c.get("control") if c.get("control") in ("modulating", "load_unload") else "modulating")
+            out.update(rated_kw=num("rated_kw", 37), hours=min(n_shift, num("hours", n_shift)), air_demand=num("air_demand", 0.6), leak=num("leak", 0.1), control=c.get("control") if c.get("control") in ("modulating", "load_unload", "vsd") else "modulating")
         elif t == "lighting":
             out.update(kw=num("kw", 10), hours=min(n_shift, num("hours", n_shift)), led=bool(c.get("led", False)), after_hours_h=num("after_hours_h", 0), legacy=c.get("legacy") if c.get("legacy") in ("t8", "t12", "metal_halide") else "t8")
         elif t == "hvac":
@@ -263,7 +263,7 @@ def calibrate_loop(run: Run, spec: dict, bill: float):
     return spec, round(err, 1)
 
 
-FIX_DOC = ('Fix types: vsd_pump{target:pump id}; repair_leaks{target:compressor id,target_leak:0-0.2}; led_retrofit{target:lighting id}; '
+FIX_DOC = ('Fix types: vsd_pump{target:pump id}; vsd_compressor{target:compressor id} (variable-speed compressor, only worthwhile when the air demand varies); repair_leaks{target:compressor id,target_leak:0-0.2}; led_retrofit{target:lighting id}; '
            'lighting_controls{target:lighting id}; hvac_setpoint{target:hvac id,setpoint_c:number}; standby_shutdown{target:standby id}; solar_pv{kwp:number}.')
 
 
@@ -334,6 +334,8 @@ def default_plan(spec: dict) -> list[dict]:
         if c["type"] == "pump":
             out.append({"type": "vsd_pump", "target": c["id"]})
         elif c["type"] == "compressor":
+            if c.get("control") != "vsd":
+                out.append({"type": "vsd_compressor", "target": c["id"]})
             out.append({"type": "repair_leaks", "target": c["id"], "target_leak": 0.05})
         elif c["type"] == "lighting":
             out += [{"type": "led_retrofit", "target": c["id"]}, {"type": "lighting_controls", "target": c["id"]}]

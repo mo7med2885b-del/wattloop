@@ -2,7 +2,7 @@
 
 ### An energy audit in minutes, not weeks. Meta models build a living 3D twin of a factory, a simulator proves every fix before money is spent, and an engineer gets a ready report.
 
-Give WattLoop a photo (or a few sentences about the machines) and the monthly electricity bill. It names the equipment, builds a calibrated digital twin, finds the waste, **tests every proposed fix in simulation**, rejects the impractical ones, and hands an engineer a PDF with the problems, the cost, the savings and *when* to fix each one. Nothing is final until the engineer decides.
+WattLoop is a **screening tool**: it does the slow first pass of an energy audit in minutes and tells an engineer where to look first. Give it a photo (or a few sentences about the machines) and the monthly electricity bill. It names the equipment, builds a calibrated digital twin, finds the waste, **tests every proposed fix in simulation**, rejects the impractical ones, and hands an engineer a PDF with the problems, the cost, the savings and *when* to fix each one. Nothing is final until the engineer decides.
 
 **Who does what.** Muse Spark 1.3 reads, lays out, argues and writes. Muse Wonder designs the 3D scene as simple parts. SAM 3.1 locates machines in the photo. Muse Image 1.0 made the demo photos, machine pictures and logo. Plain code does every calculation, check and drawing.
 
@@ -171,6 +171,8 @@ python -m uvicorn server:app --port 8010
 
 ## Limits and roadmap
 
+
+**Variable-speed compressors.** The twin now models variable-speed compressors (power about 0.04 + 0.96 x flow) and proposes them as a fix. The curve was fitted on two points of a measured manufacturer data sheet (CAGI, ISO 1217) and checked on four held-out points: median error 2.8%, worst 3.0%. Chillers, heat recovery and fans are still not modelled: no verified part-load data was found for them.
 
 **Real-world check.** Published evaluations of real industrial programs verify about 93% of predicted savings overall (Energy Trust of Oregon, 578 projects), but individual measures range from about 0.47 to 1.0 (for example compressed air 0.47 and variable-frequency drives 0.66 in a PG&E evaluation by Itron). Treat WattLoop's savings as an **upper-end screening estimate** that an engineer verifies on site. The Evidence panel lists these sources.
 

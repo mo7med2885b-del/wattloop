@@ -8,13 +8,14 @@ const Report = (() => {
   function imgToDataUrl(src, max = 900) {
     return new Promise((res) => { const im = new Image(); im.crossOrigin = "anonymous"; im.onload = () => { const k = Math.min(1, max / Math.max(im.width, im.height)), c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); res({ url: c.toDataURL("image/jpeg", .85), w: c.width, h: c.height }); }; im.onerror = () => res(null); im.src = src; });
   }
-  const probName = (f) => ({ vsd_pump: "Throttled pumps", repair_leaks: "Compressed-air leaks", led_retrofit: "Inefficient lighting", lighting_controls: "Lights on after hours", hvac_setpoint: "Over-cooling", standby_shutdown: "Idle machines left on", solar_pv: "Unused daytime solar potential" }[f.type] || f.type);
-  const fixName = (f) => ({ vsd_pump: "Variable-speed drive on pumps", repair_leaks: "Repair compressed-air leaks", led_retrofit: "LED lighting retrofit", lighting_controls: "Lighting controls (after-hours off)", hvac_setpoint: "Raise cooling setpoint", standby_shutdown: "Auto shut-down of idle machines", solar_pv: "Rooftop solar PV" }[f.type] || f.type.replace(/_/g, " "));
+  const probName = (f) => ({ vsd_pump: "Throttled pumps", repair_leaks: "Compressed-air leaks", vsd_compressor: "Fixed-speed compressor at part load", led_retrofit: "Inefficient lighting", lighting_controls: "Lights on after hours", hvac_setpoint: "Over-cooling", standby_shutdown: "Idle machines left on", solar_pv: "Unused daytime solar potential" }[f.type] || f.type);
+  const fixName = (f) => ({ vsd_pump: "Variable-speed drive on pumps", repair_leaks: "Repair compressed-air leaks", vsd_compressor: "Variable-speed compressor", led_retrofit: "LED lighting retrofit", lighting_controls: "Lighting controls (after-hours off)", hvac_setpoint: "Raise cooling setpoint", standby_shutdown: "Auto shut-down of idle machines", solar_pv: "Rooftop solar PV" }[f.type] || f.type.replace(/_/g, " "));
   function problem(f, spec) {
     const c = (id) => (spec.components || []).find((x) => x.id === f.target) || {};
     const k = c();
     switch (f.type) {
       case "vsd_pump": return `Pumps run at full speed while a half-closed valve throttles the flow (flow demand ${Math.round((k.flow_demand || 0) * 100)}%). The motor burns the difference as heat. A drive matches speed to demand.`;
+      case "vsd_compressor": return "A fixed-speed compressor keeps drawing a large share of its full power when the plant needs less air. A variable-speed drive makes only the air that is used (published data sheet: about 40% of full power at 38% flow).";
       case "repair_leaks": return `About ${Math.round((k.leak || 0) * 100)}% of the compressor's capacity is lost to leaks. The machine runs all day to replace air that escapes. Target after repair: ${Math.round((f.target_leak || 0.05) * 100)}%.`;
       case "led_retrofit": return `Old ${(k.legacy || "t8").toUpperCase()} fluorescent lighting draws about ${Math.round(1 / (({ t8: .65, t12: .49, metal_halide: .32 })[k.legacy || "t8"]) * 100 - 100)}% more power than LED for the same job.`;
       case "lighting_controls": return `Lights stay on about ${k.after_hours_h || 0} hours after closing. Controls switch them off when nobody is working.`;

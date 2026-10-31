@@ -23,6 +23,7 @@ PARAMS = {
     "capex_leak_egp": 3000.0,   # USD placeholder (UNVERIFIED), replace with supplier quotes
     "capex_led_egp_per_kw": 120.0,   # USD placeholder (UNVERIFIED), replace with supplier quotes
     "capex_controls_egp": 1500.0,   # USD placeholder (UNVERIFIED), replace with supplier quotes
+    "capex_vsd_comp_egp_per_kw": 200.0,   # USD placeholder (UNVERIFIED), replace with supplier quotes
     "capex_standby_egp": 500.0,   # USD placeholder (UNVERIFIED), replace with supplier quotes
     "capex_pv_egp_per_kwp": 900.0,   # USD placeholder (UNVERIFIED), replace with supplier quotes
     "capex_hvac_egp": 0.0,
@@ -30,7 +31,7 @@ PARAMS = {
 # LED power as a share of the old lamp, by baseline: PNNL-20404 (2011) T8 median of 0.649/0.597/0.772, T12 0.49; metal halide from rated watts only (PARTIAL)
 LED_BY_LEGACY = {"t8": 0.65, "t12": 0.49, "metal_halide": 0.32}
 PV_MAX_SHARE = 0.20   # ASSUMPTION: solar may not cover more than 30% of the plant's monthly energy (no roof data, no export credit)
-COMPRESSOR_CURVES = {"modulating": (0.70, 0.30), "load_unload": (0.25, 0.75)}  # power share at zero / extra at full load (CAC fact sheet 6; Fluid Power World 2018)
+COMPRESSOR_CURVES = {"modulating": (0.70, 0.30), "load_unload": (0.25, 0.75), "vsd": (0.04, 0.96)}   # vsd: power = 0.04 + 0.96 x flow, fitted on the 100% and 38% points of a measured CAGI data sheet (ELGI EG 160SP 100 V, ISO 1217 Annex E); checked on 4 held-out points  # power share at zero / extra at full load (CAC fact sheet 6; Fluid Power World 2018)
 # sensitivity sets: low / base / high savings. HVAC band 4.5% / 6% / 10% per degC; LED +-; pump static share +-0.2; leak slope 0.75 / 1 / 1
 SENSITIVITY = {"low": {"hvac_pct_per_c": 0.045, "led_scale": 1.15, "static_shift": 0.2, "leak_slope": 0.75},
                "base": {},
@@ -68,6 +69,8 @@ def component_power_kw(c: dict, params: dict) -> float:
         return c["count"] * c["rated_kw"] * frac
     if t == "compressor":
         c0, c1 = COMPRESSOR_CURVES.get(c.get("control", "modulating"), COMPRESSOR_CURVES["modulating"])
+        if c.get("control") == "vsd":   # a variable-speed machine makes only the air that is used, leaks included, so the leak is part of the flow
+            return min(c["rated_kw"], c["rated_kw"] * (c0 + c1 * min(1.0, c["air_demand"] + params["leak_slope"] * c["leak"])))
         base = c0 + c1 * min(1.0, c["air_demand"])
         return min(c["rated_kw"], c["rated_kw"] * (base + params["leak_slope"] * c["leak"]))
     if t == "lighting":
@@ -145,7 +148,7 @@ def breakdown_kwh(spec: dict, params: dict | None = None) -> dict[str, float]:
 
 
 # ------------------------------------------------------------------ fixes
-FIX_TYPES = ["vsd_pump", "repair_leaks", "led_retrofit", "lighting_controls", "hvac_setpoint", "standby_shutdown", "solar_pv"]
+FIX_TYPES = ["vsd_pump", "vsd_compressor", "repair_leaks", "led_retrofit", "lighting_controls", "hvac_setpoint", "standby_shutdown", "solar_pv"]
 
 
 class FixError(ValueError):
@@ -168,6 +171,14 @@ def apply_fix(spec: dict, fix: dict, params: dict | None = None) -> tuple[dict, 
             raise FixError(f"{tid} already has a variable-speed drive")
         c["vsd"] = True
         capex = p["capex_vsd_egp_per_kw"] * c["rated_kw"] * c["count"]
+    elif t == "vsd_compressor":
+        c = by_id.get(tid)
+        if not c or c["type"] != "compressor":
+            raise FixError(f"{tid} is not a compressor")
+        if c.get("control") == "vsd":
+            raise FixError(f"{tid} is already variable speed")
+        c["control"] = "vsd"
+        capex = p["capex_vsd_comp_egp_per_kw"] * c["rated_kw"]
     elif t == "repair_leaks":
         c = by_id.get(tid)
         if not c or c["type"] != "compressor":

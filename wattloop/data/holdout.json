@@ -1,0 +1,58 @@
+[
+ {
+  "id": "CAGI-VSD-1",
+  "component": "Compressor, variable speed",
+  "label": "723.8 cfm of 1,086 cfm (67% flow)",
+  "kind": "comp",
+  "inputs": {
+   "load": 0.6665,
+   "control": "vsd"
+  },
+  "published": 0.6619,
+  "source": "ELGI EG 160SP 100 V, CAGI data sheet, measured per ISO 1217 Annex E (sheet 2024; CAGI does not verify)",
+  "url": "https://www.elgi.com/us/wp-content/uploads/2026/07/EG-160-SP-V-100.pdf",
+  "status": "VERIFIED"
+ },
+ {
+  "id": "CAGI-VSD-2",
+  "component": "Compressor, variable speed",
+  "label": "629.9 cfm of 1,086 cfm (58% flow)",
+  "kind": "comp",
+  "inputs": {
+   "load": 0.58,
+   "control": "vsd"
+  },
+  "published": 0.5844,
+  "source": "ELGI EG 160SP 100 V, CAGI data sheet, measured per ISO 1217 Annex E (sheet 2024; CAGI does not verify)",
+  "url": "https://www.elgi.com/us/wp-content/uploads/2026/07/EG-160-SP-V-100.pdf",
+  "status": "VERIFIED"
+ },
+ {
+  "id": "CAGI-VSD-3",
+  "component": "Compressor, variable speed",
+  "label": "816 cfm of 1,086 cfm (75% flow)",
+  "kind": "comp",
+  "inputs": {
+   "load": 0.7514,
+   "control": "vsd"
+  },
+  "published": 0.7395,
+  "source": "ELGI EG 160SP 100 V, CAGI data sheet, measured per ISO 1217 Annex E (sheet 2024; CAGI does not verify)",
+  "url": "https://www.elgi.com/us/wp-content/uploads/2026/07/EG-160-SP-V-100.pdf",
+  "status": "VERIFIED"
+ },
+ {
+  "id": "CAGI-VSD-4",
+  "component": "Compressor, variable speed",
+  "label": "909 cfm of 1,086 cfm (84% flow)",
+  "kind": "comp",
+  "inputs": {
+   "load": 0.837,
+   "control": "vsd"
+  },
+  "published": 0.8194,
+  "source": "ELGI EG 160SP 100 V, CAGI data sheet, measured per ISO 1217 Annex E (sheet 2024; CAGI does not verify)",
+  "url": "https://www.elgi.com/us/wp-content/uploads/2026/07/EG-160-SP-V-100.pdf",
+  "status": "VERIFIED"
+ }
+]

@@ -52,7 +52,7 @@ def clean(rows) -> list[dict]:
                     row[k] = min(hi, max(lo, float(r[k])))
                 except (TypeError, ValueError):
                     pass
-        if r.get("control") in ("modulating", "load_unload"):
+        if r.get("control") in ("modulating", "load_unload", "vsd"):
             row["control"] = r["control"]
         if r.get("vsd") is True:
             row["vsd"] = True

@@ -56,3 +56,17 @@ def test_input_benchmark_better_inputs_smaller_error():
     from wattloop import benchmark
     r = benchmark.run(1000, 40)
     assert r["user_kw+facts"]["median"] < r["user_kw"]["median"] < r["bill_only"]["median"]
+
+
+def test_variable_speed_compressor_model_and_fix():
+    from wattloop import twin, validation
+    spec = {"name": "t", "shift": {"start": 6, "end": 22, "days_per_week": 6}, "components": [{"id": "air", "type": "compressor", "name": "c", "rated_kw": 55.0, "hours": 16, "air_demand": 0.5, "leak": 0.1, "control": "modulating"}]}
+    r = twin.evaluate(spec, [{"type": "vsd_compressor", "target": "air"}])
+    assert r["saved_kwh_month"] > 0 and not r["violations"] and r["capex_egp"] == 11000
+    try:
+        twin.evaluate(r["spec"], [{"type": "vsd_compressor", "target": "air"}])
+        assert False
+    except twin.FixError:
+        pass
+    h = validation.holdout()           # held-out measured points of a CAGI data sheet: not used to set the constants
+    assert h and h["n"] == 4 and h["worst_abs_err_pct"] < 5
