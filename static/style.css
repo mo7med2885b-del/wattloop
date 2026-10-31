@@ -209,3 +209,5 @@ button.primary.danger{background:var(--bad);color:#fff}
 
 .tagsbtn{position:absolute;right:10px;bottom:44px;z-index:6;background:var(--pn);color:var(--tx);border:1px solid var(--or);padding:5px 12px;font-weight:700;font-size:11.5px;cursor:pointer}
 .stage.notags .callouts,.stage.notags .leaders,.stage.notags .cmptag,.stage.notags .caption{display:none!important}
+
+.playbtn{background:var(--pn);color:var(--tx);border:1px solid var(--or);padding:4px 10px;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap}.top-right .clock{cursor:pointer}

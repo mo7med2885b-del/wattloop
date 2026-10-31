@@ -113,6 +113,7 @@ const App = (() => {
     const building = !$("#loader").hidden, tag = $("#dayTag");   // no twin yet: no simulated time either
     $("#clock").textContent = building ? "--:--:--" : `${String(hi).padStart(2, "0")}:${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
     if (tag) tag.textContent = building ? "twin not built yet" : "simulated day";
+    const pb = $("#playBtn"); if (pb) { const t2 = Factory.isPaused() ? "▶ Start" : "⏸ Pause"; if (pb.textContent !== t2) pb.textContent = t2; }
     if (S.lastHi !== hi) { S.lastHi = hi; markTimeline(hi); drawBars(f.hour); }
     const a = foc ? (f.partsA[foc] || [])[hi] || 0 : f.hourA[hi] || 0, b = foc ? (f.partsB[foc] || [])[hi] || 0 : f.hourB[hi] || 0;
     S.shown.a += (a - S.shown.a) * .15; S.shown.b += (b - S.shown.b) * .15; $("#bnA").textContent = Math.abs(S.shown.a).toFixed(0); $("#bnB").textContent = Math.abs(S.shown.b).toFixed(0);
@@ -370,6 +371,7 @@ const App = (() => {
     $("#evBtn").addEventListener("click", openEvidence); $("#evClose").addEventListener("click", () => { $("#ev").hidden = true; }); $("#ev").addEventListener("click", (e) => { if (e.target.id === "ev") $("#ev").hidden = true; });
     document.querySelectorAll(".speed button").forEach((b) => b.addEventListener("click", () => { Factory.setSpeed(+b.dataset.s); document.querySelectorAll(".speed button").forEach((x) => x.classList.toggle("on", x === b)); }));
     $("#run").addEventListener("click", start); $("#wfOpen").addEventListener("click", () => WF.open()); $("#demoBtn").addEventListener("click", demo); (function () { const st = $("#stage"), b = $("#tagsBtn"); const set = (off) => { st.classList.toggle("notags", off); b.textContent = off ? "Show tags" : "Hide tags"; try { localStorage.setItem("wl-notags", off ? "1" : "0"); } catch (e) { /* ignore */ } }; let off = false; try { off = localStorage.getItem("wl-notags") === "1"; } catch (e) { /* ignore */ } set(off); b.addEventListener("click", () => set(!st.classList.contains("notags"))); })();
+    const togglePlay = () => { if ($("#loader").hidden) Factory.setPaused(!Factory.isPaused()); }; $("#playBtn").addEventListener("click", togglePlay); $(".top-right .clock").addEventListener("click", togglePlay);
     $("#overview").addEventListener("click", () => Factory.focus(null));
     $("#pick").addEventListener("click", (e) => { e.stopPropagation(); $("#pickMenu").hidden = !$("#pickMenu").hidden; });
     document.addEventListener("click", () => { $("#pickMenu").hidden = true; });
