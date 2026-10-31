@@ -233,6 +233,18 @@ def _demo_parts(spec: dict, pid: str) -> None:
         parts.apply_parts(spec, json.loads(f.read_text(encoding="utf-8")).get(pid, {}))
 
 
+def _demo_design(spec: dict) -> None:
+    """The hero demo (Delta Foods): layout, props and Muse Wonder machine shapes designed once with tools/make_hero.py (wattloop/data/demo_design.json)."""
+    f = Path(__file__).parent / "wattloop" / "data" / "demo_design.json"
+    if not f.exists():
+        return
+    d = json.loads(f.read_text(encoding="utf-8"))
+    for c in spec["components"]:
+        if c["id"] in d.get("components", {}):
+            c["design"] = d["components"][c["id"]]
+    spec["extras"] = d.get("extras", [])
+
+
 def _random_demo(item: dict) -> dict:
     from wattloop import twin
     import copy
@@ -283,7 +295,7 @@ def demo_instant(pick: str | None = None):
             return _random_demo(choice)
     import copy as _copy
     spec = _copy.deepcopy(demo.TRUTH)
-    _demo_parts(spec, "demo")
+    _demo_design(spec)
     generic = pipeline.generic_spec({"start": 6, "end": 22, "days_per_week": 6})
     bill = demo.case()["bill_kwh"]
     round1 = [{"type": "vsd_pump", "target": "pumps"}, {"type": "repair_leaks", "target": "air", "target_leak": 0.0}, {"type": "led_retrofit", "target": "lights"},

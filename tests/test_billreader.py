@@ -118,3 +118,10 @@ def test_run_price_flows_into_the_money_numbers():
     a, b = twin.evaluate(spec, plan, {"tariff_egp_per_kwh": 0.10}), twin.evaluate(spec, plan, {"tariff_egp_per_kwh": 0.20})
     assert b["saved_egp_year"] == pytest.approx(2 * a["saved_egp_year"], rel=0.01)
     assert twin.sensitivity(spec, plan, {"tariff_egp_per_kwh": 0.20})["base"]["saved_egp_year"] == b["saved_egp_year"]
+
+
+def test_price_from_the_bill_makes_the_dollar_estimate_much_better():
+    from wattloop import benchmark
+    r = benchmark.run_dollars(1000, 40)
+    for mode, v in r.items():
+        assert v["bill_price"] < v["default_price"], mode

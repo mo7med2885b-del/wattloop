@@ -383,14 +383,14 @@ window.Factory = (function () {
     },
     onFrame(f) { onFrame = f; }, onFocus(f) { onFocus = f; }, getSpec() { return S.mode === "after" ? S.specB : S.specA; }, get mode() { return S.mode; }, get focused() { return S.focus; },
     scene() { return (S.mode === "after" ? W.B : W.A); },
-    snapshot(which) {   // renders one scene at 1200x700 and returns a PNG data URL (used by the PDF report)
+    snapshot(which, o = {}) {   // renders one scene (default 1200x700; o.w/o.h/o.q for a high-resolution picture) and returns a JPEG data URL (used by the PDF report and the README screenshots)
       const w = which === "after" ? W.B : W.A; if (!w) return null;
       const old = renderer.getSize(new T.Vector2()), hour = which === "after" ? 11 : 11;
-      renderer.setSize(1200, 700, false); renderer.setScissorTest(false); renderer.setViewport(0, 0, 1200, 700);
-      const a = cam.aspect, f = cam.fov; cam.aspect = 1200 / 700; cam.fov = 34; cam.updateProjectionMatrix();
+      const SW = o.w || 1200, SH = o.h || 700; renderer.setSize(SW, SH, false); renderer.setScissorTest(false); renderer.setViewport(0, 0, SW, SH);
+      const a = cam.aspect, f = cam.fov; cam.aspect = SW / SH; cam.fov = 34; cam.updateProjectionMatrix();
       const ce = Math.cos(.5), saved = cam.position.clone(); cam.position.set(Math.sin(.62) * ce * 44, Math.sin(.5) * 44 + 1.2, Math.cos(.62) * ce * 44); cam.lookAt(0, 1.2, 0);
       animate(w, hour, 0, which === "after" ? S.partsB : S.partsA); renderer.render(w.sc, cam);
-      const url = canvas.toDataURL("image/jpeg", .82);
+      const url = canvas.toDataURL("image/jpeg", o.q || .82);
       cam.position.copy(saved); cam.aspect = a; cam.fov = f; cam.updateProjectionMatrix(); renderer.setSize(old.x, old.y, false);
       return url;
     },

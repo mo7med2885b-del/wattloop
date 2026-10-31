@@ -88,3 +88,26 @@ def run(first: int, count: int) -> dict:
             if true_saving > 0:
                 errs[mode].append(abs(pred - true_saving) / true_saving * 100)
     return {m: {"n": len(v), "median": round(statistics.median(v), 1), "mean": round(statistics.mean(v), 1), "p90": round(sorted(v)[int(0.9 * len(v)) - 1], 1)} for m, v in errs.items() if v}
+
+
+def run_dollars(first: int, count: int) -> dict:
+    """Same synthetic plants, now with a random true electricity price (0.05-0.25 USD/kWh, an assumed range). Compares the error of the predicted DOLLAR saving
+    when the app keeps its default price (0.10) with the error when the price printed on an uploaded bill is used. kWh errors do not depend on the price."""
+    out = {m: {"default_price": [], "bill_price": []} for m in ("bill_only", "typical", "user_kw", "user_kw+facts")}
+    for seed in range(first, first + count):
+        rng = random.Random(seed)
+        truth = truth_plant(rng)
+        price = random.Random(seed + 7).uniform(0.05, 0.25)
+        for mode in out:
+            est = estimate(copy.deepcopy(truth), {"user_kw+facts": "user_kw_facts"}.get(mode, mode), rng)
+            plan = plan_for(est)
+            if not plan:
+                continue
+            true_kwh = twin.evaluate(truth, [f for f in plan if f.get("target") in {c["id"] for c in truth["components"]} or f.get("type") == "solar_pv"], {"tariff_egp_per_kwh": price})["saved_kwh_month"]
+            if true_kwh <= 0:
+                continue
+            true_usd = true_kwh * 12 * price
+            for key, p in (("default_price", 0.10), ("bill_price", price)):
+                pred = twin.evaluate(est, plan, {"tariff_egp_per_kwh": p})["saved_kwh_month"] * 12 * p
+                out[mode][key].append(abs(pred - true_usd) / true_usd * 100)
+    return {m: {k: round(statistics.median(v), 1) for k, v in d.items() if v} for m, d in out.items()}
