@@ -315,7 +315,8 @@ window.Factory = (function () {
   // ------------------------------------------------------------------ main loop
   function frame() {
     if (!running) return; requestAnimationFrame(frame);
-    let dt = Math.min(.05, clock.getDelta()); if (S.paused) dt = 0; else { S.day = (S.day + dt / DAY) % 1; VT += dt; }   // paused: the clock, the machines and the slow camera orbit all stand still const hour = S.day * 24;
+    let dt = Math.min(.05, clock.getDelta()); if (S.paused) dt = 0; else { S.day = (S.day + dt / DAY) % 1; VT += dt; }
+    const hour = S.day * 24;   // paused: the clock, the machines and the slow camera orbit all stand still
     const w = box.clientWidth, h = box.clientHeight; if (!w || !h) return;
     if (canvas.width !== Math.floor(w * renderer.getPixelRatio()) || canvas.height !== Math.floor(h * renderer.getPixelRatio())) renderer.setSize(w, h, false);
     const views = S.mode === "compare" ? [[W.A, 0, S.partsA], [W.B, 1, S.partsB]] : S.mode === "after" ? [[W.B, 0, S.partsB]] : [[W.A, 0, S.partsA]];
