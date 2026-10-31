@@ -462,7 +462,18 @@ def scene_designer(run: Run, spec: dict, obs: dict, boxes: list[dict]):
     with ThreadPoolExecutor(1) as ex:
         fut = ex.submit(shapes)
         out, info = _layout_designer(run, spec, obs, boxes)
+        props_got, props_info = {}, {"usd": 0.0}
+        if meta.available() and meta.env("PARTS_3D", "1") == "1":
+            try:
+                props_got, props_info = parts.generate_props(run.budget, spec, run.image, run.case["description"], obs, boxes)   # big furnaces, ovens, silos: after the layout knows where they stand
+                run.calls += 1 if props_info.get("usd") else 0
+            except meta.BudgetExceeded:
+                raise
+            except Exception:  # noqa: BLE001
+                props_got = {}
         got, pinfo = fut.result()
+    got = {**got, **props_got}
+    pinfo = {"usd": pinfo.get("usd", 0.0) + props_info.get("usd", 0.0), "model": pinfo.get("model") or props_info.get("model")}
     n = parts.apply_parts(spec, got)
     info = {**info, "usd": info.get("usd", 0.0) + pinfo.get("usd", 0.0), "calls": info.get("calls", 0) + (1 if pinfo.get("usd") else 0)}
     out["shapes_by_model"] = n

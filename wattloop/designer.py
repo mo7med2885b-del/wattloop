@@ -166,7 +166,13 @@ def apply_design(spec: dict, design: dict) -> None:
             c["design"] = {"x": d["x"], "z": d["z"], "scale": d["scale"], **{k: d[k] for k in ("look", "units", "orient") if d.get(k)}}
             if old_parts:
                 c["design"]["parts"] = old_parts
+    old = [(x.get("role"), round(x["pos"][0]), round(x["pos"][2]), x["parts"]) for x in (spec.get("extras") or []) if x.get("parts")]
     spec["extras"] = design["extras"]
+    for x in spec["extras"]:   # props that Muse Wonder designed keep their parts when the layout is refined
+        for role, px, pz, parts in old:
+            if x.get("role") == role and abs(x["pos"][0] - px) <= 1.5 and abs(x["pos"][2] - pz) <= 1.5:
+                x["parts"] = parts
+                break
 
 
 def user_prompt(spec: dict, description: str, obs: dict | None, boxes: list[dict]) -> str:

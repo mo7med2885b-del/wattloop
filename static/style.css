@@ -211,3 +211,5 @@ button.primary.danger{background:var(--bad);color:#fff}
 .stage.notags .callouts,.stage.notags .leaders,.stage.notags .cmptag,.stage.notags .caption{display:none!important}
 
 .playbtn{background:var(--pn);color:var(--tx);border:1px solid var(--or);padding:4px 10px;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap}.top-right .clock{cursor:pointer}
+
+#iso canvas{opacity:0;transition:opacity .3s}

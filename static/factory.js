@@ -4,7 +4,7 @@
 window.Factory = (function () {
   const T = THREE;
   const OR = 0xff6a00, GR = 0x35e08a, BODY = 0x4a525d, DARK = 0x2b313a, EDGE = 0xf0f4f8;
-  let LIGHT = false;  // light mode lightens dark machine bodies and darkens edge lines; accents stay orange / green
+  let LIGHT = (() => { try { return localStorage.getItem("wl-theme") === "light"; } catch (e) { return false; } })();   // start in the saved theme so the first frame is not dark  // light mode lightens dark machine bodies and darkens edge lines; accents stay orange / green
   let renderer, cam, clock, box, canvas, calloutsEl, leadersEl, running = false;
   const S = { specA: null, specB: null, partsA: {}, partsB: {}, hourA: [], hourB: [], mode: "now", paused: false, day: 6 / 24, focus: null };
   const W = { A: null, B: null };
@@ -66,8 +66,16 @@ window.Factory = (function () {
 
     // machines whose shape was designed by Muse Spark as validated primitive parts (see wattloop/parts.py); others keep the template shape
     const hasParts = (c) => !!(c && c.design && c.design.parts && c.design.parts.length);
-    const SLOTC = { pump: [-8.2, 6], compressor: [7, 5.4], motors: [-1.6, -3.6], hvac: [10, -9.3], standby: [-13.5, -3.6] }, SLOTF = { pump: [11, 4.8], compressor: [10, 4.8], motors: [18, 4.4], hvac: [4.8, 3.2], standby: [3.8, 3.2] };
+    const SLOTC = { pump: [-8.2, 6], compressor: [7, 5.4], motors: [-1.6, -3.6], hvac: [10, -9.3], standby: [-13.5, -3.6] }, SLOTF = { pump: [11, 4.8], compressor: [10, 4.8], motors: [18, 7.2], hvac: [4.8, 3.2], standby: [3.8, 3.2] };
     w.spin = []; w.slide = []; const SLOTHX = { pump: 5.5, compressor: 5, motors: 9, hvac: 2.4, standby: 1.9 };
+    const partMesh = (p) => {
+      const z = p.size; let geo;
+      if (p.shape === "box") geo = new T.BoxGeometry(z[0], z[1], z[2]); else if (p.shape === "cylinder") geo = new T.CylinderGeometry(z[0], z[0], z[1], 24); else if (p.shape === "cone") geo = new T.CylinderGeometry(0.001, z[0], z[1], 24); else if (p.shape === "sphere") geo = new T.SphereGeometry(z[0], 16, 12); else geo = new T.TorusGeometry(z[0], z[1], 10, 28);
+      const m = mk(geo, parseInt(p.color.slice(1), 16), EDGE, .6); m.position.set(p.pos[0], p.pos[1], p.pos[2]);
+      if (p.opacity) { m.material.transparent = true; m.material.opacity = p.opacity; m.material.depthWrite = false; }
+      if (p.rot) m.rotation.set(p.rot[0] * Math.PI / 180, p.rot[1] * Math.PI / 180, p.rot[2] * Math.PI / 180);
+      return m;
+    };
     const buildParts = (c) => {
       const [cx, cz] = SLOTC[c.type], [fw, fd] = SLOTF[c.type]; begin(c);
       const g = new T.Group(); g.position.set(cx, 0, cz); const K = { pump: 1.2, compressor: 1.2, motors: 1.08, hvac: 1.25, standby: 1.25 }[c.type] || 1; g.scale.setScalar(K); tgt.add(g);
@@ -168,7 +176,7 @@ window.Factory = (function () {
       const led = new T.Mesh(new T.SphereGeometry(.18, 10, 10), mat(0x303030, { emissive: 0xff2a20, emissiveIntensity: 0 })); led.position.set(-12.6, 1.7, -2.8); tgt.add(led); w.stby = { led, off: !!SB.auto_off };
       zone(SB, -13.5, -3.6, 3.6, 3); end(SB, -13.5, -3.6);
     }
-    [P, C, M, H, SB].forEach((c) => { if (hasParts(c)) buildParts(c); });
+    spec.components.forEach((c) => { if (SLOTC[c.type] && hasParts(c)) buildParts(c); });   // every component with a designed shape, not only the first of each type
     const V = byType("pv")[0];
     if (V) {
       const cnt = Math.min(14, Math.max(4, Math.round(V.kwp / 4)));
@@ -178,7 +186,7 @@ window.Factory = (function () {
     // props designed by the Scene Designer (validated primitives only): they make the plant look like this plant
     const PAL = { steel: 0x59626d, dark: 0x2b313a, accent: 0x6b3a14 };
     const propMesh = (x) => {
-      const col = PAL[x.color] || PAL.steel, ec = x.color === "accent" ? OR : EDGE, sz = x.size;
+      const col = x.role === "column" ? 0x8b96a3 : (PAL[x.color] || PAL.steel), ec = x.color === "accent" ? OR : EDGE, sz = x.size;
       if (x.shape === "ribbed") {   // drum with rings, lying along x (kiln, dryer, rotary drum)
         const g = new T.Group(), body = Cyl(sz[0], sz[1], col, ec, 28, .75); body.rotation.z = Math.PI / 2; g.add(body);
         for (let i = 0; i < 6; i++) { const ring = Cyl(sz[0] * 1.08, .18, DARK, ec, 28, .8); ring.rotation.z = Math.PI / 2; ring.position.x = -sz[1] / 2 + (i + .5) * sz[1] / 6; g.add(ring); }
@@ -194,9 +202,9 @@ window.Factory = (function () {
       return x.shape === "cylinder" ? Cyl(sz[0], sz[1], col, ec, 22, .75) : Box(sz[0], sz[1], sz[2], col, ec, .75);
     };
     (spec.extras || []).forEach((x) => {
-      const m = propMesh(x);
+      const m = x.parts && x.parts.length ? (() => { const g = new T.Group(); x.parts.forEach((p) => g.add(partMesh(p))); return g; })() : propMesh(x);
       const rp = x.repeat || { n: 1, dx: 0, dz: 0 };
-      for (let i = 0; i < Math.min(12, rp.n || 1); i++) { const k = i === 0 ? m : m.clone(); k.position.set(Math.max(-16, Math.min(16, x.pos[0] + i * rp.dx)), x.pos[1], Math.max(-10.5, Math.min(10.5, x.pos[2] + i * rp.dz))); sc.add(k); }
+      for (let i = 0; i < Math.min(12, rp.n || 1); i++) { const k = i === 0 ? m : m.clone(); k.position.set(Math.max(-16, Math.min(16, x.pos[0] + i * rp.dx)), x.parts && x.parts.length ? 0 : x.pos[1], Math.max(-10.5, Math.min(10.5, x.pos[2] + i * rp.dz))); sc.add(k); }
     });
     // energy flow lines from the grid entry (front left) to every zone, like the routed paths in the reference
     const entry = [-15, 10]; const color = after ? GR : OR;
@@ -319,7 +327,7 @@ window.Factory = (function () {
     if (!running) return; requestAnimationFrame(frame);
     let dt = Math.min(.05, clock.getDelta()); if (S.paused) dt = 0; else { S.day = (S.day + dt / DAY) % 1; VT += dt; }
     const hour = S.day * 24;   // paused: the clock, the machines and the slow camera orbit all stand still
-    const w = box.clientWidth, h = box.clientHeight; if (!w || !h) return;
+    const w = box.clientWidth, h = box.clientHeight; if (!w || !h) return; if (canvas.style.opacity !== "1" && W.A) canvas.style.opacity = "1";   // fade in once a plant is drawn
     if (canvas.width !== Math.floor(w * renderer.getPixelRatio()) || canvas.height !== Math.floor(h * renderer.getPixelRatio())) renderer.setSize(w, h, false);
     const views = S.mode === "compare" ? [[W.A, 0, S.partsA], [W.B, 1, S.partsB]] : S.mode === "after" ? [[W.B, 0, S.partsB]] : [[W.A, 0, S.partsA]];
     const n = views.length, vw = w / n; cam.aspect = vw / h; cam.fov = n === 2 ? 44 : 34; cam.updateProjectionMatrix();
