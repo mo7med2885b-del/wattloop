@@ -297,6 +297,33 @@ const App = (() => {
     }).filter((o) => o.kw > 0);
   }
   async function loadMachines() { try { machCat = (await (await fetch("/api/machines")).json()).catalog; } catch (e) { machCat = []; } $("#madd").addEventListener("click", () => { if (machCat.length && document.querySelectorAll("#mrows .mrow").length < 12) pickMachine((k) => { mRow({ kind: k }); $("#mach").open = true; }); }); $("#mpClose").addEventListener("click", () => { $("#mpick").hidden = true; }); $("#mpick").addEventListener("click", (e) => { if (e.target.id === "mpick") $("#mpick").hidden = true; }); }
+  // ---------------------------------------------------------------- bill file: the AI reads it and fills the monthly kWh
+  let billData = null, billInfo = null;
+  const esc2 = (t) => String(t == null ? "" : t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  function initBill() {
+    const f = $("#billFile"), out = $("#billOut");
+    f.addEventListener("change", () => {
+      const file = f.files && f.files[0]; billInfo = null; out.hidden = true; if (!file) { $("#billRow").hidden = true; return; }
+      if (file.size > 10 * 1024 * 1024) { out.hidden = false; out.className = "billout bad"; out.textContent = "The file is larger than 10 MB."; $("#billRow").hidden = true; return; }
+      const rd = new FileReader(); rd.onload = () => { billData = { name: file.name, b64: String(rd.result).split(",")[1] || "" }; $("#billName").textContent = file.name; $("#billRow").hidden = false; }; rd.readAsDataURL(file);
+    });
+    $("#billRead").addEventListener("click", async () => {
+      if (!billData) return; const btn = $("#billRead"); btn.disabled = true; btn.textContent = "Reading…"; out.hidden = false; out.className = "billout"; out.textContent = "The AI is reading your bill…";
+      try {
+        const r = await fetch("/api/bill/read", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ filename: billData.name, data_b64: billData.b64 }) });
+        const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.detail || "Could not read the file.");
+        if (!j.ok) { out.className = "billout bad"; out.textContent = j.reason || "No kWh figure found. Please type it."; billInfo = null; return; }
+        billInfo = j; $("#bill").value = j.suggested_kwh; const price = j.price_usd_per_kwh, conf = Math.round((j.confidence || 0) * 100);
+        out.className = "billout" + (j.needs_check ? " warn" : "");
+        out.innerHTML = `<b>Read it:</b> ${Number(j.suggested_kwh).toLocaleString("en-US")} kWh per month${j.billing_period ? " (" + esc2(j.billing_period) + ")" : ""}${j.months && j.months.length > 1 ? ", from " + j.months.length + " months in the file" : ""}. Confidence ${conf}%${j.verified_in_text === true ? ", found in the document text" : j.verified_in_text === false ? ", NOT found in the text: please check" : ""}${j.method === "pattern" ? " (pattern match, no AI)" : ""}.`
+          + (j.peak_kw ? ` Peak demand ${Number(j.peak_kw).toLocaleString("en-US")} kW.` : "") + (j.price_per_kwh ? ` Price ${j.price_per_kwh} ${esc2(j.currency || "")}/kWh.` : "")
+          + (j.evidence ? `<div class="ev">“${esc2(j.evidence)}”</div>` : "") + (j.notes ? `<div class="ev">${esc2(j.notes)}</div>` : "")
+          + (price ? `<label><input type="checkbox" id="usePrice" checked> Use this price (${price} USD/kWh) for the money numbers</label>` : (j.price_per_kwh ? `<div class="ev">The price is in ${esc2(j.currency || "another currency")}; the app calculates in USD, so the default price is kept.</div>` : ""));
+        imgStatus("ok", "Monthly bill filled in from your file. Check it, then build the twin.");
+      } catch (e) { out.className = "billout bad"; out.textContent = String(e.message || e); billInfo = null; }
+      finally { btn.disabled = false; btn.textContent = "Read it"; }
+    });
+  }
   async function start() {
     if (running) { cancel(); return; }
     const bill = +$("#bill").value; if (!(bill > 0)) { imgStatus("bad", "Enter the monthly electricity bill in kWh."); return; }
@@ -305,6 +332,7 @@ const App = (() => {
     if (source.type === "text" && $("#desc").value.trim().length < 15) { imgStatus("bad", "Describe the machines in a sentence or two first."); return; }
     const body = source.type === "text" ? { description: $("#desc").value, bill_kwh: bill } : source.type === "gallery" ? { gallery_id: source.id, description: $("#desc").value, bill_kwh: bill } : { image_b64: upload, description: $("#desc").value, bill_kwh: bill };
     const ms = readMachines(); if (ms.length) body.machines = ms;
+    const up = $("#usePrice"); if (billInfo && billInfo.price_usd_per_kwh && up && up.checked) body.tariff_usd_per_kwh = billInfo.price_usd_per_kwh;
     const r = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     if (!r.ok) { setRunning(false); let m = "Could not start."; try { m = (await r.json()).detail || m; } catch (e) { /* ignore */ } imgStatus("bad", m); return; }
     runId = (await r.json()).run_id; clearInterval(timer); timer = setInterval(poll, 500); poll();
@@ -367,7 +395,7 @@ const App = (() => {
     try { if (localStorage.getItem("wl-side-l") === "1") setSide("l", true); if (localStorage.getItem("wl-side-r") === "1") setSide("r", true); } catch (e) { /* ignore */ }
     $(".photo").addEventListener("click", openSeen); $("#seenClose").addEventListener("click", () => { $("#seen").hidden = true; }); $("#seen").addEventListener("click", (e) => { if (e.target.id === "seen") $("#seen").hidden = true; });
     $("#pdfBtn").addEventListener("click", () => Report.download({ result: S.result, specBefore: calSpec, billKwh: +$("#bill").value, caseName: (S.caseName || "Facility") }));
-    loadMachines();
+    loadMachines(); initBill();
     $("#evBtn").addEventListener("click", openEvidence); $("#evClose").addEventListener("click", () => { $("#ev").hidden = true; }); $("#ev").addEventListener("click", (e) => { if (e.target.id === "ev") $("#ev").hidden = true; });
     document.querySelectorAll(".speed button").forEach((b) => b.addEventListener("click", () => { Factory.setSpeed(+b.dataset.s); document.querySelectorAll(".speed button").forEach((x) => x.classList.toggle("on", x === b)); }));
     $("#run").addEventListener("click", start); $("#wfOpen").addEventListener("click", () => WF.open()); $("#demoBtn").addEventListener("click", demo); (function () { const st = $("#stage"), b = $("#tagsBtn"); const set = (off) => { st.classList.toggle("notags", off); b.textContent = off ? "Show tags" : "Hide tags"; try { localStorage.setItem("wl-notags", off ? "1" : "0"); } catch (e) { /* ignore */ } }; let off = false; try { off = localStorage.getItem("wl-notags") === "1"; } catch (e) { /* ignore */ } set(off); b.addEventListener("click", () => set(!st.classList.contains("notags"))); })();

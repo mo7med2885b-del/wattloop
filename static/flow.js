@@ -8,7 +8,7 @@ const WF = (() => {
   const CW = 196, CH = 66;
   // id, name, icon, kind (agent = Muse model, code = no model, human = engineer), sub
   const DEF = [
-    ["intake", "Intake", "cog", "code", "Photo · text · bill"],
+    ["intake", "Intake", "cog", "code", "Photo · text · bill file"],
     ["scene", "Scene Check", "vision", "agent", "Is it a factory?"],
     ["vision", "Vision Reader", "vision", "agent", ""],
     ["segment", "Segmenter", "segment", "agent", "SAM 3.1"],

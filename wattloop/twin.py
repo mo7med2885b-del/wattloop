@@ -283,29 +283,29 @@ def _parts(spec: dict, params: dict | None) -> dict:
     return {k: [round(v, 1) for v in vals] for k, vals in parts.items()}
 
 
-def sensitivity(spec: dict, fixes: list[dict]) -> dict:
+def sensitivity(spec: dict, fixes: list[dict], params: dict | None = None) -> dict:
     """Re-run the plan with the evidence-based low / base / high assumption sets."""
     out = {}
     for name, prm in SENSITIVITY.items():
-        r = evaluate(spec, fixes, prm)
+        r = evaluate(spec, fixes, {**prm, **(params or {})})
         out[name] = {"saved_egp_year": r["saved_egp_year"], "saved_kwh_month": r["saved_kwh_month"]}
     return out
 
 
-def solar_split(spec: dict, plan: list[dict]) -> dict:
+def solar_split(spec: dict, plan: list[dict], params: dict | None = None) -> dict:
     """Show the solar share of the saving apart from the efficiency fixes (solar is generation, not waste removal)."""
-    full = evaluate(spec, plan)
-    rest = evaluate(spec, [f for f in plan if f.get("type") != "solar_pv"])
+    full = evaluate(spec, plan, params)
+    rest = evaluate(spec, [f for f in plan if f.get("type") != "solar_pv"], params)
     return {"saved_kwh_month_no_solar": rest["saved_kwh_month"], "saved_egp_year_no_solar": rest["saved_egp_year"],
             "solar_kwh_month": round(full["saved_kwh_month"] - rest["saved_kwh_month"], 1), "solar_egp_year": full["saved_egp_year"] - rest["saved_egp_year"]}
 
 
-def plan_detail(spec: dict, plan: list[dict]) -> list[dict]:
+def plan_detail(spec: dict, plan: list[dict], params: dict | None = None) -> list[dict]:
     """Each fix evaluated on its own (savings overlap when fixes are combined, so the total is lower than the sum)."""
     out = []
     for f in plan:
         try:
-            r = evaluate(spec, [f])
+            r = evaluate(spec, [f], params)
             out.append({"fix": f, "saved_kwh_month": r["saved_kwh_month"], "saved_egp_year": r["saved_egp_year"], "capex_egp": r["capex_egp"], "payback_months": r["payback_months"]})
         except FixError:
             continue

@@ -35,6 +35,10 @@ The gap is not knowledge, it is access: audits take weeks, cost money and need s
 
 <p align="center"><img src="assets/screens/inputs-simple.jpg" alt="Photo, description, bill and machines go into WattLoop; a plan comes out" width="70%"><br><sub><b>What goes in.</b> A photo or a description, the monthly bill (required) and an optional machine list. The engineer decides on the plan. Graphic generated with Muse Image 1.0.</sub></p>
 
+## Upload the bill itself
+
+Instead of typing the monthly kWh, upload the bill: **PDF, Word (.docx), Excel (.xlsx), CSV, text, or a photo or scan** (up to 10 MB). Press **Read it** and the Bill Reader agent finds the monthly kWh (not the kW demand, not the money), the billing period, the peak demand and the price per kWh. It fills in the bill field and shows the exact line it used. If the bill prints a price in USD you can use it for all the money numbers; a price in another currency is shown but not applied, because the app calculates in USD. The AI's answer is checked in code: numbers must be plausible, and the kWh figure must really appear in the document text, otherwise the result is flagged "please check". Without a Meta key a simple pattern match still finds a kWh figure next to the word kWh (flagged as unchecked).
+
 ## Tell it your machines (optional, big accuracy gain)
 
 Pick the machines from a short list (pumps, compressors, fans, conveyors, mixers, lighting, air-conditioning, standby loads), then enter the **count, nameplate kW and hours per day**. Typical kW values are pre-filled in italics as placeholders to replace. Optional facts (HVAC setpoint, hours the lights stay on after closing, compressor control type) sharpen it further. The bill then becomes a **cross-check** instead of the only source of sizes; if your machines cannot explain the bill, the app adds a labelled "unlisted loads" block and lowers its confidence.
@@ -97,6 +101,7 @@ flowchart TD
 | Agent | Model | Job | Safeguard |
 |---|---|---|---|
 | Scene Check | Muse Spark (vision / text) | Refuse anything that is not clearly a factory (fruit, furniture, X-ray) | Runs first; nothing else starts if refused |
+| Bill Reader | Muse Spark (reads text, or sees a scan) | Reads the client's bill file (PDF, Word, Excel, CSV, text or a photo) and returns the monthly kWh and the printed price | The file is only data; every number is range-checked and the kWh must appear in the document text; the user sees and can edit the result |
 | Vision Reader | Muse Spark (vision) | Name the equipment and visible waste signs | Output validated, text in photos treated as data |
 | Segmenter | SAM 3.1 | Outline each machine in the photo | Falls back to no overlay |
 | Twin Engineer | Muse Spark | Write the facility as structured JSON | Clamped to the twin's schema in code |
@@ -152,7 +157,7 @@ Python 3.10 or newer. An internet connection is needed in the browser: the 3D vi
 
 ```bash
 git clone https://github.com/mo7med2885b-del/wattloop && cd wattloop
-pip install -r requirements.txt
+pip install -r requirements.txt   # includes pypdfium2 for reading PDF bills
 python -m uvicorn server:app --port 8010
 # open http://localhost:8010
 ```

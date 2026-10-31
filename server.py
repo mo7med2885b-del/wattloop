@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from wattloop import demo, machines, meta, parts, pipeline, scene
+from wattloop import billreader, demo, machines, meta, parts, pipeline, scene
 
 app = FastAPI(title="WattLoop")
 RUNS: dict[str, pipeline.Run] = {}
@@ -25,6 +25,7 @@ class RunReq(BaseModel):
     gallery_id: str | None = None
     use_demo: bool = False
     machines: list[dict] | None = None
+    tariff_usd_per_kwh: float | None = None   # price read from the client's bill
 
 
 MAX_UPLOAD = 12 * 1024 * 1024
@@ -94,6 +95,31 @@ def demo_image():
 def demo_case():
     c = demo.case()
     return {"description": c["description"], "bill_kwh": c["bill_kwh"], "shift": {"start": 6, "end": 22, "days_per_week": 6}, "meta_live": meta.available()}
+
+
+class BillReq(BaseModel):
+    filename: str
+    data_b64: str
+
+
+@app.post("/api/bill/read")
+def bill_read(req: BillReq):
+    """Read an uploaded bill (PDF, Word, Excel, CSV/text or photo) and return the monthly kWh and price it contains. The file is only parsed as data."""
+    b64 = req.data_b64.split(",", 1)[1] if "," in req.data_b64[:80] else req.data_b64
+    if len(b64) > billreader.MAX_BYTES * 4 // 3 + 100:
+        raise HTTPException(413, "The file is larger than 10 MB.")
+    try:
+        raw = base64.b64decode(b64, validate=False)
+    except Exception:  # noqa: BLE001
+        raise HTTPException(400, "The file is not valid base64.")
+    try:
+        return billreader.read_bill(meta.Budget(max_calls=3), req.filename[:200], raw)
+    except billreader.BillError as e:
+        raise HTTPException(400, str(e))
+    except meta.BudgetExceeded as e:
+        raise HTTPException(429, f"The API guard stopped this call: {e}")
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(502, f"Could not read the bill ({type(e).__name__}). Please type the monthly kWh.")
 
 
 @app.get("/api/machines")
@@ -311,6 +337,8 @@ def start(req: RunReq):
         if not image and not (req.description or "").strip():
             raise HTTPException(400, "add a photo or a description")
         case.update(description=(req.description or "")[:2000], bill_kwh=req.bill_kwh, name="Your facility")
+    if req.tariff_usd_per_kwh and billreader.PRICE_RANGE_USD[0] <= req.tariff_usd_per_kwh <= billreader.PRICE_RANGE_USD[1]:
+        case["tariff"] = float(req.tariff_usd_per_kwh)
     rows = machines.clean(req.machines)
     if rows:
         case["machines"] = rows

@@ -49,6 +49,8 @@ class Run:
         self.calls = 0
         self.result: dict | None = None
         self.spec: dict | None = None
+        t = (case or {}).get("tariff")
+        self.params = {"tariff_egp_per_kwh": float(t)} if t else None   # price per kWh read from the client's bill (USD), else the default
         self.decision: dict | None = None
         self.t0 = time.time()
 
@@ -297,8 +299,8 @@ def hunt_and_verify(run: Run, spec: dict):
             f = {k: v for k, v in f.items() if k != "why"} | {"why": str(f.get("why", ""))[:140]}
             test = {k: v for k, v in f.items() if k != "why"}
             try:
-                ev = twin.evaluate(spec, accepted + [test])
-                solo = twin.evaluate(spec, [test])
+                ev = twin.evaluate(spec, accepted + [test], run.params)
+                solo = twin.evaluate(spec, [test], run.params)
                 if ev["violations"]:
                     status, reason = "rejected", "; ".join(ev["violations"])
                 elif solo["saved_kwh_month"] <= 0:
@@ -312,14 +314,14 @@ def hunt_and_verify(run: Run, spec: dict):
                 results.append({"fix": test, "why": f["why"], "status": status, "reason": reason, "saved_egp_year": 0, "saved_kwh_month": 0})
             if status == "rejected":
                 feedback_parts.append(f"{test}: {reason}")
-        cur = twin.evaluate(spec, accepted)
+        cur = twin.evaluate(spec, accepted, run.params)
         run.emit("fix_round", round=rnd, results=results, spec_after=cur["spec"], hourly_after=cur["hourly_after"], hourly_before=cur["hourly_before"], parts_before=cur["parts_before"], parts_after=cur["parts_after"])
         run.emit("node_done", node="verify", ms=5, usd=0, model=None, fallback=False, output={"accepted": len(accepted), "rejected": len(feedback_parts)})
         feedback = " | ".join(feedback_parts)
         if not feedback_parts:
             break
     plan = accepted
-    ev = twin.evaluate(spec, plan)
+    ev = twin.evaluate(spec, plan, run.params)
     run.cost += usd
     run.emit("node_done", node="hunt", ms=int((time.time() - t0) * 1000), usd=round(usd, 5), model=model, fallback=fallback, calls=calls,
              output={"plan": plan, "rounds": rnd})
@@ -562,7 +564,7 @@ def _execute(run: Run):
     run.step("design", lambda: scene_designer(run, spec, obs, (seg or {}).get("boxes", [])), "Design the 3D scene (Muse Spark)")
     spec, err = calibrate_loop(run, spec, case["bill_kwh"])
     plan, ev = hunt_and_verify(run, spec)
-    sens = twin.sensitivity(spec, plan)
+    sens = twin.sensitivity(spec, plan, run.params)
     crit = run.step("critic", lambda: _safe(lambda: critic(run, spec, plan, ev, sens), lambda: critic_fallback(plan)), "Try to refute the savings")
     fb = sum(1 for x in run.events if x["type"] == "node_done" and x.get("fallback"))
     unl = next((c for c in spec["components"] if c["id"] == "unlisted"), None)
@@ -570,7 +572,7 @@ def _execute(run: Run):
     arb = arbiter(err, ev, sens, crit, fb, machines.basis(spec), unlisted_share)
     rep = run.step("report", lambda: report_writer(run, ev, plan, arb, crit), "Write the engineer brief")
     run.result = {"plan": plan, "evaluation": {k: v for k, v in ev.items() if k != "spec"}, "sensitivity": sens, "critic": crit, "arbiter": arb,
-                  "summary": rep["summary"], "plan_detail": twin.plan_detail(spec, plan), "solar": twin.solar_split(spec, plan), "params": {"tariff_egp_per_kwh": twin.PARAMS["tariff_egp_per_kwh"], "grid_kgco2_per_kwh": twin.PARAMS["grid_kgco2_per_kwh"]}, "calibration_err_pct": err, "cost_usd": round(run.cost, 4), "model_calls": run.calls, "spec_after": ev["spec"]}
+                  "summary": rep["summary"], "plan_detail": twin.plan_detail(spec, plan, run.params), "solar": twin.solar_split(spec, plan, run.params), "params": {"tariff_egp_per_kwh": (run.params or twin.PARAMS)["tariff_egp_per_kwh"], "grid_kgco2_per_kwh": twin.PARAMS["grid_kgco2_per_kwh"]}, "calibration_err_pct": err, "cost_usd": round(run.cost, 4), "model_calls": run.calls, "spec_after": ev["spec"]}
     run.emit("gate", state="REQUIRES ENGINEER REVIEW", result=run.result)
     run.emit("done", cost_usd=round(run.cost, 4), calls=run.calls, seconds=round(time.time() - run.t0, 1))
 

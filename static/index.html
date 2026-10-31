@@ -28,6 +28,8 @@
           <div id="imgstatus" class="imgstatus" hidden></div>
           <label>Description <span class="sub">(optional)</span><textarea id="desc" rows="4" autocomplete="off" placeholder="What do you know about the plant? Equipment, shifts, problems you hear or see."></textarea></label>
           <label>Monthly bill (kWh)<input id="bill" type="number" inputmode="numeric" autocomplete="off"></label>
+          <div class="billup" id="billup"><label class="fbtn" for="billFile">&#128196; Upload your bill file <span class="sub">(PDF, Word, Excel, photo)</span></label><input type="file" id="billFile" accept=".pdf,.docx,.xlsx,.csv,.txt,.png,.jpg,.jpeg,.webp" hidden>
+            <div class="billrow" id="billRow" hidden><span id="billName" class="muted small"></span><button type="button" id="billRead" class="mbtn">Read it</button></div><div id="billOut" class="billout" hidden></div></div>
           <details class="mach" id="mach"><summary>Machines <span class="sub">(optional: better accuracy)</span></summary><div id="mrows"></div><button type="button" id="madd" class="mbtn">+ Add machine</button><div class="muted small" id="mnote">Italic kW = typical value, replace with yours (nameplate). The bill is then only a cross-check.</div></details>
           <button id="run" class="primary">Build the twin</button>
         </div></section>
