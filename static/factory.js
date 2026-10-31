@@ -9,7 +9,7 @@ window.Factory = (function () {
   const S = { specA: null, specB: null, partsA: {}, partsB: {}, hourA: [], hourB: [], mode: "now", paused: false, day: 6 / 24, focus: null };
   const W = { A: null, B: null };
   const orbit = { az: 0.62, el: 0.5, dist: 46, tx: 0, ty: 1.2, tz: 0 };
-  let drag = null, DAY = 36, lastDom = 0, cos = {}, onFrame = null, onFocus = null, dust = null;
+  let VT = 0, drag = null, DAY = 36, lastDom = 0, cos = {}, onFrame = null, onFocus = null, dust = null;
   const tone = (c) => { if (!LIGHT) return c; const k = new T.Color(c); if (k.r * .3 + k.g * .59 + k.b * .11 > .3) return c; return k.lerp(new T.Color(0xffffff), .8).getHex(); };
   const mat = (c, o = {}) => new T.MeshStandardMaterial({ color: tone(c), roughness: LIGHT ? .55 : .5, metalness: LIGHT ? .2 : .2, ...o });
   let STATIC = false;  // platform pieces are not animated when the machines assemble
@@ -206,7 +206,7 @@ window.Factory = (function () {
   const active = (c, h, sh) => h >= sh.start && h < sh.end && h - sh.start < (c.hours || 24);
 
   function animate(w, hour, dt, parts) {
-    const sp = w.spec, sh = sp.shift, t = performance.now() / 1000, day = hour >= 6 && hour < 18, sunk = day ? Math.sin((hour - 6) / 12 * Math.PI) : 0;
+    const sp = w.spec, sh = sp.shift, t = VT, day = hour >= 6 && hour < 18, sunk = day ? Math.sin((hour - 6) / 12 * Math.PI) : 0;
     w.amb.intensity = (LIGHT ? .7 : .62) + .22 * sunk; w.sun.intensity = (LIGHT ? .35 : .7) + .6 * sunk;
     const c = (ty) => sp.components.find((x) => x.type === ty), L = c("lighting"), P = c("pump"), C = c("compressor"), M = c("motors"), H = c("hvac");
     let lit = false;
@@ -315,7 +315,7 @@ window.Factory = (function () {
   // ------------------------------------------------------------------ main loop
   function frame() {
     if (!running) return; requestAnimationFrame(frame);
-    const dt = Math.min(.05, clock.getDelta()); if (!S.paused) S.day = (S.day + dt / DAY) % 1; const hour = S.day * 24;
+    let dt = Math.min(.05, clock.getDelta()); if (S.paused) dt = 0; else { S.day = (S.day + dt / DAY) % 1; VT += dt; }   // paused: the clock, the machines and the slow camera orbit all stand still const hour = S.day * 24;
     const w = box.clientWidth, h = box.clientHeight; if (!w || !h) return;
     if (canvas.width !== Math.floor(w * renderer.getPixelRatio()) || canvas.height !== Math.floor(h * renderer.getPixelRatio())) renderer.setSize(w, h, false);
     const views = S.mode === "compare" ? [[W.A, 0, S.partsA], [W.B, 1, S.partsB]] : S.mode === "after" ? [[W.B, 0, S.partsB]] : [[W.A, 0, S.partsA]];
