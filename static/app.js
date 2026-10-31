@@ -110,7 +110,9 @@ const App = (() => {
   Factory.onFocus(onFocus);
   Factory.onFrame((f) => {
     S.hour = f.hour; const hi = Math.floor(f.hour), foc = f.focus, sec = Math.floor((f.hour % 1) * 3600);
-    $("#clock").textContent = `${String(hi).padStart(2, "0")}:${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
+    const building = !$("#loader").hidden, tag = $("#dayTag");   // no twin yet: no simulated time either
+    $("#clock").textContent = building ? "--:--:--" : `${String(hi).padStart(2, "0")}:${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
+    if (tag) tag.textContent = building ? "twin not built yet" : "simulated day";
     if (S.lastHi !== hi) { S.lastHi = hi; markTimeline(hi); drawBars(f.hour); }
     const a = foc ? (f.partsA[foc] || [])[hi] || 0 : f.hourA[hi] || 0, b = foc ? (f.partsB[foc] || [])[hi] || 0 : f.hourB[hi] || 0;
     S.shown.a += (a - S.shown.a) * .15; S.shown.b += (b - S.shown.b) * .15; $("#bnA").textContent = Math.abs(S.shown.a).toFixed(0); $("#bnB").textContent = Math.abs(S.shown.b).toFixed(0);
