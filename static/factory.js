@@ -49,8 +49,9 @@ window.Factory = (function () {
     const grid = new T.GridHelper(34, 34, LIGHT ? 0xb9c0c7 : 0x3a414b, LIGHT ? 0xd0d5db : 0x2d333b); grid.position.y = .02; grid.scale.z = 23 / 34; sc.add(grid);
     const per = zoneOutline(sc, 0, 0, 33.4, 22.4, 0x7a3300); per.material.opacity = .02;
     // distant structures for context (tanks and sheds), like the wider factory in the reference
-    [[-25, -10, 2.4, 5], [-29, 4, 2, 3.5], [25, -13, 2.6, 5.5], [30, 3, 1.8, 4]].forEach(([x, z, r, h]) => { const t = Cyl(r, h, 0x20252c, 0x4a5058, 24, .35); t.position.set(x, h / 2, z); sc.add(t); });
-    [[-24, 12, 6, 3, 5], [24, 14, 7, 2.5, 5]].forEach(([x, z, bw, bh, bd]) => { const b = Box(bw, bh, bd, 0x20252c, 0x4a5058, .35); b.position.set(x, bh / 2, z); sc.add(b); });
+    const FULL = !!(spec.hall && spec.hall.length);   // full-AI scene: Muse Wonder designed the lights, columns, props and background too; the template ones are not drawn
+    if (!FULL) [[-25, -10, 2.4, 5], [-29, 4, 2, 3.5], [25, -13, 2.6, 5.5], [30, 3, 1.8, 4]].forEach(([x, z, r, h]) => { const t = Cyl(r, h, 0x20252c, 0x4a5058, 24, .35); t.position.set(x, h / 2, z); sc.add(t); });
+    if (!FULL) [[-24, 12, 6, 3, 5], [24, 14, 7, 2.5, 5]].forEach(([x, z, bw, bh, bd]) => { const b = Box(bw, bh, bd, 0x20252c, 0x4a5058, .35); b.position.set(x, bh / 2, z); sc.add(b); });
     STATIC = false;
     const byType = (t) => spec.components.filter((c) => c.type === t);
     const zc = (c) => (after && isFixed[c.type](c) ? GR : OR);
@@ -95,7 +96,7 @@ window.Factory = (function () {
     };
     const L = byType("lighting")[0];
     if (L) {
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < (FULL ? 0 : 6); i++) {
         const s = Box(3.8, .16, .5, 0x2a2e33, EDGE, .8); s.position.set(-10 + i * 4, 7.4, i % 2 ? -3 : 3); sc.add(s); w.lights.push(s);
         const g = glow(L.led ? "cool" : "warm", L.led ? "rgba(190,235,255,.55)" : "rgba(255,190,110,.55)", 9, .35); g.position.x = s.position.x; g.position.z = s.position.z; sc.add(g); w.glows.push(g);
       }
@@ -203,7 +204,8 @@ window.Factory = (function () {
       if (x.shape === "hopper") { const m2 = new T.Mesh(new T.CylinderGeometry(sz[0], sz[0] * .35, sz[1], 20), mat(col)); edges(m2, ec, .75); return m2; }
       return x.shape === "cylinder" ? Cyl(sz[0], sz[1], col, ec, 22, .75) : Box(sz[0], sz[1], sz[2], col, ec, .75);
     };
-    (spec.extras || []).forEach((x) => {
+    if (FULL) { const hg = new T.Group(); spec.hall.forEach((p) => hg.add(partMesh(p))); sc.add(hg); }
+    (FULL ? [] : (spec.extras || [])).forEach((x) => {
       const m = x.parts && x.parts.length ? (() => { const g = new T.Group(); x.parts.forEach((p) => g.add(partMesh(p))); return g; })() : propMesh(x);
       const rp = x.repeat || { n: 1, dx: 0, dz: 0 };
       for (let i = 0; i < Math.min(12, rp.n || 1); i++) { const k = i === 0 ? m : m.clone(); k.position.set(Math.max(-16, Math.min(16, x.pos[0] + i * rp.dx)), x.parts && x.parts.length ? 0 : x.pos[1], Math.max(-10.5, Math.min(10.5, x.pos[2] + i * rp.dz))); sc.add(k); }

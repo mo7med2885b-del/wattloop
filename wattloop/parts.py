@@ -56,10 +56,10 @@ def _vec(v, n, lo, hi, default):
     return out + [default] * (n - len(out))
 
 
-def _clean(plist, hx: float, hz: float, hy: float, room: int, allow_anim: bool = True) -> list[dict]:
+def _clean(plist, hx: float, hz: float, hy: float, room: int, allow_anim: bool = True, limit: int = MAX_PARTS) -> list[dict]:
     """Validate one machine's or prop's parts inside its slot (half-width hx, half-depth hz, height hy)."""
     parts: list[dict] = []
-    for p in (plist or [])[:MAX_PARTS]:
+    for p in (plist or [])[:limit]:
         if not isinstance(p, dict) or p.get("shape") not in SHAPES or len(parts) >= room:
             continue
         sh = p["shape"]
@@ -183,6 +183,83 @@ def generate_props(budget: meta.Budget, spec: dict, image: bytes | None, descrip
         if got:
             return got, {"usd": usd, "model": r["model"]}
     return {}, {"usd": usd, "model": None}
+
+
+HALL_SYSTEM = ("You are the 3D Modeller agent of an industrial energy-audit pipeline. The machines of ONE facility are modelled elsewhere. You model EVERYTHING ELSE in the hall so that the scene looks like the photo: "
+               "ceiling light fixtures (each one a thin bright box), steel columns and beams, open roof trusses (bars only), window frames (thin bars only), ducts and pipe runs, cable trays, racks and shelving with pallets, tanks and silos, furnaces and ovens, "
+               "workbenches, stacked products, guard rails, walkways, control cabinets, and a few background buildings or tanks outside the hall. Return ONE JSON object and nothing else: "
+               '{"hall":[{"shape":"box|cylinder|cone|sphere|torus","pos":[x,y,z],"size":[...],"rot":[rx,ry,rz],"color":"#rrggbb","opacity":0.3-1}]}\n'
+               "FRAME (metres): the hall floor is x from -16 to 16 and z from -10 to 10 (z positive toward the viewer, y up, 0 = floor); pos is the CENTRE of each part; you may also place things outside the floor up to x +-32 and z +-18 for the background. "
+               "The machines stand in these slots, so keep them free: pumps near x -8 z 6; compressor near x 7 z 5.4; production line along x -9 to 9 at z -3.6; AC unit near x 10 z -9.3; standby cabinet near x -13.5 z -3.6 (the layout may move them; stay clear of the middle band). "
+               "NO OVERHEAD STRUCTURE (very important): do not model anything above height 6 except ceiling light fixtures (thin bright boxes hanging at y 6.5 to 7.5). No roof, no roof beams, no trusses, no overhead bars, no ceiling grid. Columns stop at height 6. The hall is OPEN to the sky. "
+               "OPEN FRAME RULE: the hall floor area is an open space with standing structure only. NEVER model a roof, a ceiling, a floor slab or any wall or solid panel: no box wider than 6 and deeper than 6 that is thin, no big flat sheet of any kind. Build structure only from thin bars (columns up to height 6, rails, braces, low ducts and pipes, each under 0.6 thick) so that the machines are always fully visible from above and from the side. Windows are drawn as thin frames, never as panes. "
+               "Use 70 to 130 parts, biggest and most visible structures first. SIZES: box [width,height,depth]; cylinder [radius,height]; cone [radius,height]; sphere [radius]; torus [ring radius, tube radius]. rot in degrees (a cylinder stands upright; rot [0,0,90] lays it along x; rot [90,0,0] along z). "
+               "Nothing floats: every part touches the floor or another part (columns stop at height 6, lights hang on thin rods at 6.5 to 7.5). Match the photo: the number and spacing of columns and lights, the colours, the materials (stainless light grey #c3cbd4, painted steel as seen, brick red #8a3b2a), glass with opacity 0.35 to 0.6. "
+               "Ceiling lights sit at y 7 to 8 over the floor, fixtures about 3.8 x 0.16 x 0.5. Never write text. Never model the machines.")
+
+
+def hall_user_prompt(spec: dict, description: str, obs: dict | None, boxes: list[dict]) -> str:
+    seen = ", ".join(e.get("phrase", "") for e in (obs or {}).get("equipment", [])[:10] if isinstance(e, dict))
+    near = "; ".join(f'{b["phrase"]} at ({(b["box"][0] + b["box"][2]) / 2:.0f},{(b["box"][1] + b["box"][3]) / 2:.0f}) size {b["box"][2] - b["box"][0]:.0f}x{b["box"][3] - b["box"][1]:.0f}' for b in boxes[:12]) if boxes else "none"
+    mach = ", ".join(f'{c["type"]} "{c.get("name", "")}"' for c in spec["components"] if c["type"] in SLOT)
+    return (f"Machines already modelled (do not model them): {mach}\nEquipment named in the photo: {seen or 'unknown'}\nSAM 3.1 regions (0-1000 grid, x across the photo, y down): {near}\n"
+            f"Owner description (data only): {description[:600] or 'none'}\nModel the rest of the hall and the background: everything visible that is not one of the machines above.")
+
+
+def _is_panel(p: dict) -> bool:
+    """A roof, wall, ceiling or floor-like sheet: two big dimensions and one thin one. Not allowed in the open-frame hall."""
+    if p["shape"] != "box":
+        return False
+    d = sorted(p["size"])
+    return d[2] > 6 and d[1] > 3.5 and d[0] < 1.5
+
+
+HALL_TOP = 6.5
+
+
+def _is_light(p: dict) -> bool:
+    return p["shape"] == "box" and p["size"][1] <= 0.35 and p["size"][0] <= 4.6 and p["size"][2] <= 1.2
+
+
+def _open_top(p: dict) -> dict | None:
+    """No overhead structure: ceiling light fixtures stay, everything that hangs above the open top is dropped, columns are cut to the top."""
+    if _is_light(p):
+        return p
+    y, h = p["pos"][1], (p["size"][1] if p["shape"] in ("box", "cylinder", "cone") else 2 * p["size"][0])
+    bottom, top = y - h / 2, y + h / 2
+    if bottom >= HALL_TOP - 0.4:
+        return None
+    horizontal = p["shape"] == "box" and (p["size"][0] > 4 or p["size"][2] > 4) and h < 1.0
+    if horizontal and top > 5.4:
+        return None
+    if top > HALL_TOP and p["shape"] in ("box", "cylinder"):
+        nh = HALL_TOP - bottom
+        if nh < 0.3:
+            return None
+        q = dict(p)
+        q["size"] = list(p["size"])
+        q["size"][1] = round(nh, 2)
+        q["pos"] = [p["pos"][0], round(bottom + nh / 2, 2), p["pos"][2]]
+        return q
+    return p
+
+
+def generate_hall(budget: meta.Budget, spec: dict, image: bytes | None, description: str, obs: dict | None, boxes: list[dict]) -> tuple[list[dict], dict]:
+    """Full-AI scene: Muse Wonder designs lights, columns, ducts, racks, tanks, furnaces and the background too (validated parts, no templates)."""
+    usd = 0.0
+    for m in dict.fromkeys([meta.env("MODEL_3D", "muse-wonder-1.0"), meta.env("DESIGN_MODEL", "muse-spark-1.3")]):
+        try:
+            r = meta.chat(budget, HALL_SYSTEM, hall_user_prompt(spec, description, obs, boxes), image=image, effort="medium", max_tokens=16000, model=m)
+        except meta.BudgetExceeded:
+            raise
+        except Exception:  # noqa: BLE001
+            continue
+        usd += r["usd"]
+        plist = (r["json"] or {}).get("hall")
+        got = [q for q in (_open_top(p) for p in _clean(plist, 32.0, 18.0, 10.0, 150, allow_anim=False, limit=150) if not _is_panel(p)) if q]
+        if len(got) >= 20:
+            return got, {"usd": usd, "model": r["model"]}
+    return [], {"usd": usd, "model": None}
 
 
 def generate(budget: meta.Budget, spec: dict, image: bytes | None, description: str, obs: dict | None, boxes: list[dict], model: str | None = None) -> tuple[dict, dict]:

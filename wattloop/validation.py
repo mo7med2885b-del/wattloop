@@ -173,13 +173,19 @@ def holdout() -> dict | None:
 
 
 REALIZATION = {
-    "title": "Real industrial programs: verified savings divided by predicted savings (realization rate)",
-    "source": "Energy Trust of Oregon, Production Efficiency program evaluation, projects 2003-2005 (Table I, p.7)",
-    "url": "https://energytrust.org/wp-content/uploads/2016/11/071214_2003-2005_PE_Evaluation.pdf",
-    "opened_and_read": True,
-    "overall": 92.8,
-    "rows": [("Compressed air", 99.95), ("HVAC", 100.0), ("Lighting", 93.2), ("Refrigeration", 97.23), ("Process fans", 84.78), ("Motors", 77.4), ("Process pumping", 63.81)],
-    "note": "Real plants, evaluated after the fact, in Oregon (US). It says how far program PREDICTIONS were from VERIFIED results, so our estimates are likely to be similarly high by up to a third for pumps and motors. It does not test our formulas, and the number of projects per row was not checked. Another study (Itron, ACEEE 2011) found one industrial program as low as 0.49.",
+    "title": "What real programs found: verified savings divided by predicted savings (realization rate, RR)",
+    "groups": [
+        {"name": "Energy Trust of Oregon, industrial program, projects 2003-2005 (578 projects)", "url": "https://energytrust.org/wp-content/uploads/2016/11/071214_2003-2005_PE_Evaluation.pdf",
+         "rows": [["All projects", "92.8%", "578 projects"], ["Compressed air", "99.95%", "123 projects, 44 site visits"], ["HVAC", "100%", "12 projects"], ["Process pumping", "63.8%", "20 projects, 6 site visits"],
+                  ["Lighting", "93.2% (imputed from a 2005 study, not measured)", "164 projects"], ["Motors", "77.4% (imputed from a 2005 study, not measured)", "128 projects"]]},
+        {"name": "PG&E fabrication-industry programs, evaluated by Itron 2006-2008 (ACEEE 2011)", "url": "https://www.aceee.org/files/proceedings/2011/data/papers/0085-000061.pdf",
+         "rows": [["All electric savings", "0.49", "about 160 sites cited"], ["Compressed air", "0.47", "13 sites"], ["Variable-frequency drives", "0.66", "21 sites"], ["Lighting", "1.04", "11 sites"]]},
+        {"name": "Single real plants (measured or planned)", "url": "https://www.atlascopco.com/en-uk/compressors/news-and-stories/cement-manufacturer",
+         "rows": [["Cement plant, compressed-air leak repair (Atlas Copco)", "predicted 162,000 kWh/yr, measured 120,300 kWh/yr by installed meters (74%)", "31 compressors"],
+                  ["Schneider Electric Smyrna TN, drives on 7 pumps (DOE IAC TT0052)", "60.8 kW down to 16.5 kW measured (about 73%); the plant raised flow afterwards, so not like for like", "7 pumps"],
+                  ["Koppers (WVU IAC), leak repair", "138,472 kWh/yr planned; no measured result reported", "1 plant"]]},
+    ],
+    "note": "Real programs and plants, mostly US. They show how far audit PREDICTIONS were from VERIFIED results: close for compressed air and HVAC in one program, 0.47 to 0.66 in another, and low for pumps. So treat our savings as an upper-end screening estimate and verify on site. These do not test our formulas, and none of the sources gives a plant's equipment list together with its monthly bill. Source details were opened and read, except where marked.",
 }
 
 

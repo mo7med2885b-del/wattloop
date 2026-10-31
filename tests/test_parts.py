@@ -48,3 +48,21 @@ def test_props_are_validated_inside_their_footprint():
     assert all(abs(p["pos"][0]) <= 3.1 and abs(p["pos"][2]) <= 2.3 for p in out["prop_0"])
     n = parts.apply_parts(spec, out)
     assert n == 1 and spec["extras"][0]["parts"]
+
+
+def test_hall_panels_are_rejected_but_beams_and_columns_stay():
+    roof = {"shape": "box", "pos": [0, 8, 0], "size": [30, 0.4, 18], "color": "#999999"}
+    wall = {"shape": "box", "pos": [0, 4, -10], "size": [30, 8, 0.3], "color": "#999999"}
+    beam = {"shape": "box", "pos": [0, 8, 0], "size": [30, 0.3, 0.3], "color": "#555555"}
+    column = {"shape": "box", "pos": [5, 4, 5], "size": [0.4, 8, 0.4], "color": "#555555"}
+    assert parts._is_panel(roof) and parts._is_panel(wall) and not parts._is_panel(beam) and not parts._is_panel(column)
+
+
+def test_open_top_removes_overhead_structure_keeps_lights_and_trims_columns():
+    light = {"shape": "box", "pos": [0, 7.2, 0], "size": [3.8, 0.16, 0.5], "color": "#ffffff"}
+    beam = {"shape": "box", "pos": [0, 7.8, 0], "size": [20, 0.4, 0.4], "color": "#555555"}
+    truss = {"shape": "box", "pos": [0, 6.0, 0], "size": [30, 0.3, 0.3], "color": "#555555"}
+    column = {"shape": "box", "pos": [5, 4.5, 5], "size": [0.4, 9, 0.4], "color": "#555555"}
+    assert parts._open_top(light) == light and parts._open_top(beam) is None and parts._open_top(truss) is None
+    c = parts._open_top(column)
+    assert c and c["pos"][1] + c["size"][1] / 2 <= parts.HALL_TOP + 0.01
