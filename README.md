@@ -127,7 +127,8 @@ flowchart TD
 - **Muse Wonder**: the most capable model, used as the 3D Modeller. It designs every machine, structure and prop of the scene as simple parts (an open frame: no roof, walls or columns); code checks the parts and draws them.
 - **SAM 3.1**: segments machines from a text prompt; those regions seed the 3D layout.
 - **Muse Image 1.0**: the demo and gallery photos and the logo.
-- A real run is about 16 model calls (roughly 25 to 40 US cents at list price, the 3D Modeller being the largest part) and finishes in about a minute and a half.
+- **The price of a first look.** A full run costs roughly **40 to 50 US cents** in model usage and takes about a minute and a half. For that, a plant gets a first-pass energy picture in minutes instead of weeks, and a ranked list of fixes whose potential savings are measured in thousands of dollars a year, so an engineer knows where to look first. That is a small fraction of what a traditional audit costs.
+- A real run is about 16 model calls (roughly 40 to 50 US cents at list price, the 3D Modeller being the largest part) and finishes in about a minute and a half.
 
 ## Trust: guards and evidence
 
