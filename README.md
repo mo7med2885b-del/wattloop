@@ -128,6 +128,20 @@ flowchart TD
 - **Human in the loop.** Every result ends at an engineer decision card with the numbers, the fixes, what to check on site, and a required note for Modify or Reject.
 - **Safe geometry.** Muse Spark designs the 3D as data (lists of simple parts), never as code. Only validated parts inside each machine's slot are drawn by Three.js, so a bad model answer cannot break the scene.
 
+## Evidence: the formulas against published measurements
+
+The twin's component formulas (pumps, compressors, lighting, HVAC setpoint) were compared with **27 published data points from 8 independent sources**. The first version of the formulas had a **median error of 13.6%** (mean 17.6%, worst 62.5%, on HVAC savings, which it understated). We then adjusted the constants, but those adjusted constants were fitted on the same 27 points, so their lower error is **not** a measure of accuracy and we do not quote it. This is a check of formulas against literature, **not a field validation of any plant**.
+
+| Component | Points | Source |
+|---|---|---|
+| Pump, constant speed and variable-speed drive | 12 | One 40 hp pump test, Rockwell/Flowserve, [Plant Services, 2005](https://www.plantservices.com/equipment/electrical-systems/article/11344155/energy-efficiency-pump-energy-savings-with-vfds-plant-services) |
+| Compressor part-load | 3 | Compressed Air Challenge / US DOE [fact sheet 6](https://www.compressedairchallenge.org/data/sites/1/media/library/factsheets2026/fact-sheet-6-compressed-air-system-controls_updated2026.pdf); [Fluid Power World, 2018](https://www.fluidpowerworld.com/will-a-vsd-compressor-save-me-money/) |
+| Compressor leak repair | 1 | [DTE Energy case study, 2022](https://www.dteenergy.com/content/dam/dteenergy/deg/website/business/energy-efficiency/pdf/DTE-FFCA-CaseStudy-Fastening-2022.pdf) (estimated savings) |
+| LED lighting ratio | 6 | US DOE / PNNL [GATEWAY report, 2011](https://www1.eere.energy.gov/buildings/publications/pdfs/ssl/gateway_t8-replacement.pdf) (measured lamp watts) |
+| HVAC setpoint savings | 5 | [Roussac et al., 2011](https://researchers.mq.edu.au/en/publications/a-preliminary-evaluation-of-two-strategies-for-raising-indoor-air/) (33 offices); [University of Georgia field study, 2018](https://research.uga.edu/news/turn-up-the-thermostat-lower-energy-costs-no-complaints/); [Hoyt, Arens and Zhang, 2015](https://escholarship.org/uc/item/13s1q2xc) (a simulation) |
+
+Known weaknesses: one pump test supplies 12 of the 27 points, and the HVAC savings are the weakest match. Reproduce the numbers with `python -m wattloop.validation`, or open every point with its source link in the app's **Evidence** panel.
+
 ## Data
 
 No real facility or personal data. The demo plant, its photo (generated with Muse Image) and its electricity bill are synthetic. Tariffs, the emission factor and equipment costs are editable assumptions; capex values are placeholders to be replaced by supplier quotes.
