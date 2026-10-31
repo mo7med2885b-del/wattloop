@@ -67,18 +67,19 @@ window.Factory = (function () {
     // machines whose shape was designed by Muse Spark as validated primitive parts (see wattloop/parts.py); others keep the template shape
     const hasParts = (c) => !!(c && c.design && c.design.parts && c.design.parts.length);
     const SLOTC = { pump: [-8.2, 6], compressor: [7, 5.4], motors: [-1.6, -3.6], hvac: [10, -9.3], standby: [-13.5, -3.6] }, SLOTF = { pump: [11, 4.8], compressor: [10, 4.8], motors: [18, 4.4], hvac: [4.8, 3.2], standby: [3.8, 3.2] };
-    w.spin = [];
+    w.spin = []; w.slide = []; const SLOTHX = { pump: 5.5, compressor: 5, motors: 9, hvac: 2.4, standby: 1.9 };
     const buildParts = (c) => {
       const [cx, cz] = SLOTC[c.type], [fw, fd] = SLOTF[c.type]; begin(c);
-      const g = new T.Group(); g.position.set(cx, 0, cz); tgt.add(g);
+      const g = new T.Group(); g.position.set(cx, 0, cz); const K = { pump: 1.2, compressor: 1.2, motors: 1.08, hvac: 1.25, standby: 1.25 }[c.type] || 1; g.scale.setScalar(K); tgt.add(g);
       c.design.parts.forEach((p) => {
         const z = p.size; let geo;
         if (p.shape === "box") geo = new T.BoxGeometry(z[0], z[1], z[2]); else if (p.shape === "cylinder") geo = new T.CylinderGeometry(z[0], z[0], z[1], 24); else if (p.shape === "cone") geo = new T.CylinderGeometry(0.001, z[0], z[1], 24); else if (p.shape === "sphere") geo = new T.SphereGeometry(z[0], 16, 12); else geo = new T.TorusGeometry(z[0], z[1], 10, 28);
-        const m = mk(geo, parseInt(p.color.slice(1), 16), EDGE, .6); m.position.set(p.pos[0], p.pos[1], p.pos[2]);
+        const m = mk(geo, parseInt(p.color.slice(1), 16), EDGE, .6); m.position.set(p.pos[0], p.pos[1], p.pos[2]); if (p.opacity) { m.material.transparent = true; m.material.opacity = p.opacity; m.material.depthWrite = false; }
         if (p.rot) m.rotation.set(p.rot[0] * Math.PI / 180, p.rot[1] * Math.PI / 180, p.rot[2] * Math.PI / 180);
-        g.add(m); if (p.anim) w.spin.push({ m, axis: p.anim.slice(5), c });
+        g.add(m); if (p.anim === "slide_x") w.slide.push({ m, c, lim: SLOTHX[c.type] * .96 }); else if (p.anim) w.spin.push({ m, axis: p.anim.slice(5), c });
       });
-      zone(c, cx, cz, fw, fd);
+      const sl = w.slide.filter((o) => o.c === c); if (sl.length > 1) { const xs = sl.map((o) => o.m.position.x), lo = Math.min(...xs), hi = Math.max(...xs), sp = (hi - lo) / (sl.length - 1) || 1; sl.forEach((o) => { o.lo = lo - sp / 2; o.span = hi - lo + sp; }); }   // products stay on the belt they were placed on
+      zone(c, cx, cz, fw * K, fd * K);
       if (wasteful[c.type](c)) { const h = glow("heatR", "rgba(255,70,40,.8)", 8, 2.2); h.position.set(cx, 2.2, cz); tgt.add(h); w.heat[c.id] = h; }
       end(c, cx, cz);
     };
@@ -221,6 +222,7 @@ window.Factory = (function () {
     }
     if (M && w.boxes.length && (w.look === "conveyor" || !w.look)) { const on = active(M, hour, sh), s = on ? 1.3 * M.load_factor + .5 : 0; w.boxes.forEach((b) => { b.position.x += s * dt; if (b.position.x > 5.6) b.position.x = -9.8; }); }
     if (M && w.look && w.look !== "conveyor" && w.look !== "big_machine") { const on = active(M, hour, sh); w.boxes.forEach((b, i) => { b.position.x = (b.userData.bx ?? b.position.x) + (on ? Math.sin(t * 6 + i) * .15 : 0); }); }
+    if (w.slide) w.slide.forEach((o) => { if (active(o.c, hour, sh)) { o.m.position.x += 1.5 * dt; if (o.span ? o.m.position.x > o.lo + o.span : o.m.position.x > o.lim) o.m.position.x -= (o.span || 2 * o.lim); } });
     if (w.spin) w.spin.forEach((s2) => { s2.m.rotation[s2.axis] += (active(s2.c, hour, sh) ? 6 : 0) * dt; });
     if (M && w.drum) { const on = active(M, hour, sh); w.drum.rotation.x += (on ? .8 : 0) * dt; }
     if (w.fan) { const on = H && active(H, hour, sh); w.fan.rotation.z += (on ? 9 : 0) * dt; }
