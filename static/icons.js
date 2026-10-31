@@ -6,8 +6,8 @@ const WFIcons = (() => {
   const el = (t, a, p) => { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); if (p) p.append(e); return e; };
   const path = (d, cls, p, x = {}) => el("path", { d, class: "wfi " + cls, ...x }, p);
   const anchor = (p) => el("circle", { r: 12, fill: "none", stroke: "none", "pointer-events": "none" }, p);
-  const loop = (state, targets, vars, speed) => { state.tw && state.tw.forEach((t) => t.kill()); state.tw = []; if (!hasG || reduce) return; state.tw = [gsap.to(targets, { ...vars, svgOrigin: "0 0", duration: speed, ease: "sine.inOut", yoyo: true, repeat: -1 })]; };
-  const pop = (t) => { if (hasG && !reduce) gsap.fromTo(t, { scale: 1.3 }, { scale: 1, duration: .5, ease: "back.out(2)", svgOrigin: "0 0" }); };
+  const loop = (state, targets, vars, speed) => { state.tw && state.tw.forEach((t) => t.kill()); state.tw = []; if (!hasG || reduce) return; state.tw = [gsap.to(targets, { ...vars, transformOrigin: "50% 50%", duration: speed, ease: "sine.inOut", yoyo: true, repeat: -1 })]; };
+  const pop = (t) => { if (hasG && !reduce) gsap.fromTo(t, { scale: 1.3 }, { scale: 1, duration: .5, ease: "back.out(2)", transformOrigin: "50% 50%" }); };
   const make = {
     vision(g) { const s = {}; path("M-11,0 C-6,-8 6,-8 11,0 C6,8 -6,8 -11,0 Z", "s", g); const ir = el("circle", { r: 3.6, class: "wfi a", fill: "rgba(255,160,70,.15)" }, g); const pu = el("circle", { r: 1.5, class: "wfi-f" }, g);
       const run = (sp, amp) => loop(s, [ir, pu], { x: amp }, sp); return { idle: () => run(1.8, 3), think: (on) => run(on ? .5 : 1.8, on ? 4 : 3), done: () => pop(ir) }; },
@@ -31,7 +31,7 @@ const WFIcons = (() => {
     gate(g) { const s = {}; const h = el("g", {}, g); anchor(h); path("M-9,3 C-9,-8 9,-8 9,3 Z M-11,3 L11,3 M0,-9 L0,-3", "s", h); path("M-5,8 L-1,11 L6,5", "a", h);
       const run = (sp) => loop(s, h, { y: -1.2 }, sp); return { idle: () => run(1.8), think: (on) => run(on ? .6 : 1.8), done: () => pop(h) }; },
     cog(g) { const s = {}; const c = el("g", {}, g); anchor(c); path("M0,-9 L2,-9 L3,-6 L6,-7 L7,-5 L5,-3 L7,0 L5,2 L7,5 L6,7 L3,6 L2,9 L-2,9 L-3,6 L-6,7 L-7,5 L-5,2 L-7,0 L-5,-3 L-7,-5 L-6,-7 L-3,-6 L-2,-9 Z", "s", c); el("circle", { r: 2.6, class: "wfi a" }, c);
-      const run = (sp) => { s.tw && s.tw.forEach((t) => t.kill()); if (!hasG || reduce) return; s.tw = [gsap.to(c, { rotation: 360, svgOrigin: "0 0", duration: sp, ease: "none", repeat: -1 })]; }; return { idle: () => run(14), think: (on) => run(on ? 2.5 : 14), done: () => pop(c) }; },
+      const run = (sp) => { s.tw && s.tw.forEach((t) => t.kill()); if (!hasG || reduce) return; s.tw = [gsap.to(c, { rotation: 360, transformOrigin: "50% 50%", duration: sp, ease: "none", repeat: -1 })]; }; return { idle: () => run(14), think: (on) => run(on ? 2.5 : 14), done: () => pop(c) }; },
   };
   return { make(name, parent) { const g = el("g", { class: "wf-ic" }, parent); return (make[name] || make.cog)(g); } };
 })();
