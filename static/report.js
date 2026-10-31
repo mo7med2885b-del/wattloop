@@ -76,6 +76,10 @@ const Report = (() => {
     y += 2; h2("3. Money: what you spend today and after");
     doc.autoTable({ startY: y, margin: { left: M, right: M }, head: [["", "Energy (kWh/month)", "Cost at " + tariff + " USD/kWh (USD/month)", "USD/year"]], body: [["Today (your bill)", f0(billKwh || base), f0(monthNow), f0(monthNow * 12)], ["After the fixes (simulated)", f0(after * (billKwh || base) / base), f0(monthAfter), f0(monthAfter * 12)], ["Difference", f0(e.saved_kwh_month), f0(monthNow - monthAfter), f0(e.saved_egp_year)]], styles: { fontSize: 8.5, cellPadding: 1.8, textColor: [40, 40, 40] }, headStyles: { fillColor: DK, textColor: 255 }, columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" } } });
     y = doc.lastAutoTable.finalY + 6;
+    h2("Machines in the twin (ratings and where they came from)");
+    const srcTxt = (c) => (c.kw_source === "user" ? "typed by you" : c.kw_source === "typical" ? "catalog typical (replace with yours)" : c.kw_source === "inferred" ? "balance to the bill (unlisted loads)" : "inferred by the models and calibrated to the bill");
+    const mrows = ((specBefore && specBefore.components) || []).filter((c) => c.type !== "pv").map((c) => [ascii(c.name || c.id), String(c.count || 1), f1(c.type === "pump" ? c.rated_kw : c.type === "compressor" ? c.rated_kw : c.kw), c.hours ? f1(c.hours) : "-", ascii(srcTxt(c))]);
+    if (mrows.length) { doc.autoTable({ startY: y, margin: { left: M, right: M }, head: [["Machine", "Count", "kW (each, nameplate)", "Hours/day", "Source of the kW"]], body: mrows, styles: { fontSize: 8, cellPadding: 1.6 }, headStyles: { fillColor: OR } }); y = doc.lastAutoTable.finalY + 4; }
 
     // ---------------- page 3: risks, evidence, sign-off
     doc.addPage(); head("Risks, evidence and sign-off"); h2("4. Concerns raised by the Critic agent");
