@@ -33,7 +33,7 @@ Industry is the biggest energy user on Earth, and most of its electricity is hid
 
 The gap is not knowledge, it is access: audits take weeks, cost money and need scarce experts, so most small and medium plants never get one. **WattLoop turns the first-pass audit into something any plant, anywhere, can do in minutes**, with every number traceable and every fix tested before it is recommended. It is built to work with any country's tariffs and grid emission factor (the tariff, currency and grid factor are plain inputs; the default is USD).
 
-<p align="center"><img src="assets/screens/inputs.jpg" alt="What WattLoop takes in: a photo or description, the monthly bill and an optional machine list, through the agent loop, to a verified plan the engineer decides on" width="100%"><br><sub><b>What goes in, what comes out.</b> A photo or a description, the monthly bill (required) and an optional machine list go through the agent loop; the engineer decides on the verified plan. Illustrations generated with Muse Image 1.0.</sub></p>
+<p align="center"><img src="assets/screens/inputs-simple.jpg" alt="Photo, description, bill and machines go into WattLoop; a plan comes out" width="70%"><br><sub><b>What goes in.</b> A photo or a description, the monthly bill (required) and an optional machine list. The engineer decides on the plan. Graphic generated with Muse Image 1.0.</sub></p>
 
 ## Tell it your machines (optional, big accuracy gain)
 
