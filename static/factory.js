@@ -64,6 +64,24 @@ window.Factory = (function () {
     };
     const zone = (c, cx, cz, zw, zd) => { w.fills[c.id] = zoneOutline(tgt, cx, cz, zw, zd, zc(c)); w.anchors[c.id] = new T.Vector3(cx, 2.2, cz); w.zones = w.zones || {}; w.zones[c.id] = [cx, cz]; };
 
+    // machines whose shape was designed by Muse Spark as validated primitive parts (see wattloop/parts.py); others keep the template shape
+    const hasParts = (c) => !!(c && c.design && c.design.parts && c.design.parts.length);
+    const SLOTC = { pump: [-8.2, 6], compressor: [7, 5.4], motors: [-1.6, -3.6], hvac: [10, -9.3], standby: [-13.5, -3.6] }, SLOTF = { pump: [11, 4.8], compressor: [10, 4.8], motors: [18, 4.4], hvac: [4.8, 3.2], standby: [3.8, 3.2] };
+    w.spin = [];
+    const buildParts = (c) => {
+      const [cx, cz] = SLOTC[c.type], [fw, fd] = SLOTF[c.type]; begin(c);
+      const g = new T.Group(); g.position.set(cx, 0, cz); tgt.add(g);
+      c.design.parts.forEach((p) => {
+        const z = p.size; let geo;
+        if (p.shape === "box") geo = new T.BoxGeometry(z[0], z[1], z[2]); else if (p.shape === "cylinder") geo = new T.CylinderGeometry(z[0], z[0], z[1], 24); else if (p.shape === "cone") geo = new T.CylinderGeometry(0.001, z[0], z[1], 24); else if (p.shape === "sphere") geo = new T.SphereGeometry(z[0], 16, 12); else geo = new T.TorusGeometry(z[0], z[1], 10, 28);
+        const m = mk(geo, parseInt(p.color.slice(1), 16), EDGE, .6); m.position.set(p.pos[0], p.pos[1], p.pos[2]);
+        if (p.rot) m.rotation.set(p.rot[0] * Math.PI / 180, p.rot[1] * Math.PI / 180, p.rot[2] * Math.PI / 180);
+        g.add(m); if (p.anim) w.spin.push({ m, axis: p.anim.slice(5), c });
+      });
+      zone(c, cx, cz, fw, fd);
+      if (wasteful[c.type](c)) { const h = glow("heatR", "rgba(255,70,40,.8)", 8, 2.2); h.position.set(cx, 2.2, cz); tgt.add(h); w.heat[c.id] = h; }
+      end(c, cx, cz);
+    };
     const L = byType("lighting")[0];
     if (L) {
       for (let i = 0; i < 6; i++) {
@@ -73,7 +91,7 @@ window.Factory = (function () {
       w.anchors[L.id] = new T.Vector3(0, 7.4, 0); w.zones = w.zones || {}; w.zones[L.id] = [0, 0];
     }
     const P = byType("pump")[0];
-    if (P) {
+    if (P && !hasParts(P)) {
       begin(P); const n = Math.min(3, P.count);
       for (let i = 0; i < n; i++) {
         const g = new T.Group(); g.position.set(-10.5 + i * 3.6, 0, 6); const vert = P.design && P.design.orient === "vertical";
@@ -100,7 +118,7 @@ window.Factory = (function () {
       const h = glow("heatR", "rgba(255,70,40,.8)", 7, 2.2); h.position.set(-8, 2.2, 6); tgt.add(h); w.heat[P.id] = h; end(P, -10.5 + (n - 1) * 1.8 + .5, 6);
     }
     const C = byType("compressor")[0];
-    if (C) {
+    if (C && !hasParts(C)) {
       begin(C); const g = new T.Group(); g.position.set(5, 0, 5.4);
       const body = Box(2.9, 2.4, 2, 0x201d12, EDGE, .75); body.position.y = 1.2; g.add(body);
       const tank = Cyl(.9, 3.6, BODY, EDGE, 26, .65); tank.rotation.z = Math.PI / 2; tank.position.set(3.8, 1.05, 0); g.add(tank);
@@ -113,7 +131,7 @@ window.Factory = (function () {
       const h = glow("heatR", "rgba(255,70,40,.8)", 9, 2.4); h.position.set(7.4, 2.4, 5.4); tgt.add(h); w.heat[C.id] = h; end(C, 7, 5.4);
     }
     const M = byType("motors")[0];
-    if (M) {
+    if (M && !hasParts(M)) {
       begin(M); const look = (M.design && M.design.look) || "conveyor";
       const u = Math.max(2, Math.min(14, (M.design && M.design.units) || 6)), span = 17, step = span / u, x0 = -2 - span / 2 + step / 2;
       if (look === "machine_row" || look === "loom_rows") {   // looms, mixers, saws: rows of similar machines (loom_rows = two rows)
@@ -138,17 +156,18 @@ window.Factory = (function () {
       zone(M, -1.6, -3.6, 18, 3.6); end(M, -1.6, -3.6);
     }
     const H = byType("hvac")[0];
-    if (H) {
+    if (H && !hasParts(H)) {
       begin(H); const u = Box(3.6, 1.5, 1, 0x23272b, EDGE, .8); u.position.set(10, 3.5, -10.6); tgt.add(u);
       const fan = new T.Mesh(new T.CircleGeometry(.5, 18), mat(0x4b535a)); fan.position.set(10, 3.5, -10.08); edges(fan, EDGE); tgt.add(fan); w.fan = fan;
       w.anchors[H.id] = new T.Vector3(10, 4.4, -10.6); w.zones = w.zones || {}; w.zones[H.id] = [10, -10.6]; w.fills[H.id] = zoneOutline(tgt, 10, -9, 4.6, 3, zc(H)); end(H, 10, -9.3);
     }
     const SB = byType("standby")[0];
-    if (SB) {
+    if (SB && !hasParts(SB)) {
       begin(SB); const b = Box(2, 2, 1.5, BODY, EDGE, .7); b.position.set(-13.5, 1, -3.6); tgt.add(b);
       const led = new T.Mesh(new T.SphereGeometry(.18, 10, 10), mat(0x303030, { emissive: 0xff2a20, emissiveIntensity: 0 })); led.position.set(-12.6, 1.7, -2.8); tgt.add(led); w.stby = { led, off: !!SB.auto_off };
       zone(SB, -13.5, -3.6, 3.6, 3); end(SB, -13.5, -3.6);
     }
+    [P, C, M, H, SB].forEach((c) => { if (hasParts(c)) buildParts(c); });
     const V = byType("pv")[0];
     if (V) {
       const cnt = Math.min(14, Math.max(4, Math.round(V.kwp / 4)));
@@ -202,6 +221,7 @@ window.Factory = (function () {
     }
     if (M && w.boxes.length && (w.look === "conveyor" || !w.look)) { const on = active(M, hour, sh), s = on ? 1.3 * M.load_factor + .5 : 0; w.boxes.forEach((b) => { b.position.x += s * dt; if (b.position.x > 5.6) b.position.x = -9.8; }); }
     if (M && w.look && w.look !== "conveyor" && w.look !== "big_machine") { const on = active(M, hour, sh); w.boxes.forEach((b, i) => { b.position.x = (b.userData.bx ?? b.position.x) + (on ? Math.sin(t * 6 + i) * .15 : 0); }); }
+    if (w.spin) w.spin.forEach((s2) => { s2.m.rotation[s2.axis] += (active(s2.c, hour, sh) ? 6 : 0) * dt; });
     if (M && w.drum) { const on = active(M, hour, sh); w.drum.rotation.x += (on ? .8 : 0) * dt; }
     if (w.fan) { const on = H && active(H, hour, sh); w.fan.rotation.z += (on ? 9 : 0) * dt; }
     if (w.stby) { const out = !(hour >= sh.start && hour < sh.end), v = out && !w.stby.off ? (Math.sin(t * 4) > 0 ? 3 : .5) : 0; w.stby.led.material.emissiveIntensity = v; }

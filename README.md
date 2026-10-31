@@ -101,6 +101,7 @@ flowchart TD
 | Segmenter | SAM 3.1 | Outline each machine in the photo | Falls back to no overlay |
 | Twin Engineer | Muse Spark | Write the facility as structured JSON | Clamped to the twin's schema in code |
 | Scene Designer | Muse Spark (sees the photo) | Place machines, scale them, add props from the photo | Bounds, spacing and primitive limits enforced; falls back to a layout from the SAM boxes |
+| 3D Modeller | Muse Wonder (sees the photo; Muse Spark as fallback) | Designs each machine's shape as 14-30 simple parts (boxes, cylinders, cones, spheres, tori) with positions, sizes and colours | Parts are data, never code: shape, size, position inside the machine's floor slot, colour and part count are validated; falls back to a built-in shape |
 | Calibration loop | Code + Muse Spark | Match the twin to the real bill (under 5% error) | Hard cap of 5 iterations; deterministic fallback |
 | Waste Hunter | Muse Spark | Propose fixes from a catalog, aggressively first | Every proposal is simulated, never trusted |
 | **Fix Verifier** | **Code** | Apply each fix to the twin, reject impractical ones (3% leak floor, 26 C limit, 30% minimum drive speed, solar size cap) | Rejections go back to the hunter with the reason |
@@ -116,15 +117,16 @@ flowchart TD
 ## Meta tooling, used in depth
 
 - **Muse Spark 1.3**: vision, text, structured output and reasoning in seven different roles (Scene Check, Vision Reader, Twin Engineer, Scene Designer, Waste Hunter, Critic, Report Writer), each with its own prompt and validation.
+- **Muse Wonder**: the most capable model, used as the 3D Modeller: it designs each machine's shape as simple parts, which code validates and draws.
 - **SAM 3.1**: segments machines from a text prompt; those regions seed the 3D layout.
 - **Muse Image 1.0**: the demo and gallery photos and the logo.
-- A real run is about 15 model calls (roughly 15 to 25 US cents at list price) and finishes in about a minute and a half.
+- A real run is about 16 model calls (roughly 25 to 40 US cents at list price, the 3D Modeller being the largest part) and finishes in about a minute and a half.
 
 ## Trust: guards and evidence
 
 - **No runaway API use.** Per-run call and time caps, a global per-minute cap, daily call and spend caps, a kill switch, hard loop limits, at most two active runs, and a cancel button that stops new model calls. Covered by tests (`python -m pytest tests -q`).
 - **Human in the loop.** Every result ends at an engineer decision card with the numbers, the fixes, what to check on site, and a required note for Modify or Reject.
-- **Safe geometry.** Models never write free-form 3D: only validated primitives inside bounds are drawn.
+- **Safe geometry.** Muse Spark designs the 3D as data (lists of simple parts), never as code. Only validated parts inside each machine's slot are drawn by Three.js, so a bad model answer cannot break the scene.
 
 ## Data
 

@@ -12,7 +12,7 @@ import threading
 import time
 import uuid
 
-from . import designer, machines, meta, twin
+from . import designer, machines, meta, parts, twin
 
 NODES = ["intake", "scene", "vision", "segment", "engineer", "calibrate", "hunt", "verify", "critic", "report", "gate"]
 SYSTEM_COMMON = ("You are one agent in an industrial energy-audit pipeline for Egyptian facilities. "
@@ -445,6 +445,33 @@ def scene_check_text(budget: meta.Budget, text: str) -> dict:
 
 
 def scene_designer(run: Run, spec: dict, obs: dict, boxes: list[dict]):
+    """Layout (Muse Spark) and machine shapes (Muse Spark, as validated primitive parts) are designed in parallel, then merged."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    def shapes():
+        if not meta.available() or meta.env("PARTS_3D", "1") != "1":
+            return {}, {"usd": 0.0}
+        try:
+            res = parts.generate(run.budget, spec, run.image, run.case["description"], obs, boxes)
+            run.calls += 1
+            return res
+        except meta.BudgetExceeded:
+            raise
+        except Exception:  # noqa: BLE001  (the template shapes stay)
+            return {}, {"usd": 0.0}
+    with ThreadPoolExecutor(1) as ex:
+        fut = ex.submit(shapes)
+        out, info = _layout_designer(run, spec, obs, boxes)
+        got, pinfo = fut.result()
+    n = parts.apply_parts(spec, got)
+    info = {**info, "usd": info.get("usd", 0.0) + pinfo.get("usd", 0.0), "calls": info.get("calls", 0) + (1 if pinfo.get("usd") else 0)}
+    out["shapes_by_model"] = n
+    if n:
+        info["note"] = f"{n} machine shapes designed by {(pinfo.get('model') or 'the model').replace('muse-', 'Muse ').replace('-1.0', '')}"
+    return out, info
+
+
+def _layout_designer(run: Run, spec: dict, obs: dict, boxes: list[dict]):
     """Muse Spark designs the floor plan, proportions and props of the 3D plant; code validates it. Fallback: layout from the SAM boxes, then the template."""
     fb = designer.layout_from_boxes(spec, boxes)
     if meta.available():

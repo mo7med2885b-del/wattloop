@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from wattloop import demo, machines, meta, pipeline, scene
+from wattloop import demo, machines, meta, parts, pipeline, scene
 
 app = FastAPI(title="WattLoop")
 RUNS: dict[str, pipeline.Run] = {}
@@ -187,10 +187,18 @@ def scene_review(req: ReviewReq):
     return out
 
 
+def _demo_parts(spec: dict, pid: str) -> None:
+    """Machine shapes that Muse Spark designed earlier for the demo plants (wattloop/data/demo_parts.json): the instant Demo shows them."""
+    f = Path(__file__).parent / "wattloop" / "data" / "demo_parts.json"
+    if f.exists():
+        parts.apply_parts(spec, json.loads(f.read_text(encoding="utf-8")).get(pid, {}))
+
+
 def _random_demo(item: dict) -> dict:
     from wattloop import twin
     import copy
     spec = copy.deepcopy(item["spec"])
+    _demo_parts(spec, item["id"])
     bill = next(g["bill_kwh"] for g in gallery_items() if g["id"] == item["id"])
     first = twin.monthly_kwh(spec)
     k = bill / max(1.0, first)
@@ -234,7 +242,9 @@ def demo_instant(pick: str | None = None):
         choice = random.choice(json.loads((Path(__file__).parent / "wattloop" / "data" / "demo_specs.json").read_text(encoding="utf-8")) + [None])   # None = the original Delta Foods demo
         if choice:
             return _random_demo(choice)
-    spec = demo.TRUTH
+    import copy as _copy
+    spec = _copy.deepcopy(demo.TRUTH)
+    _demo_parts(spec, "demo")
     generic = pipeline.generic_spec({"start": 6, "end": 22, "days_per_week": 6})
     bill = demo.case()["bill_kwh"]
     round1 = [{"type": "vsd_pump", "target": "pumps"}, {"type": "repair_leaks", "target": "air", "target_leak": 0.0}, {"type": "led_retrofit", "target": "lights"},

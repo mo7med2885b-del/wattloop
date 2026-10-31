@@ -162,7 +162,10 @@ def apply_design(spec: dict, design: dict) -> None:
     for c in spec["components"]:
         d = design["layout"].get(c["id"])
         if d:
+            old_parts = (c.get("design") or {}).get("parts")   # machine shapes designed by Muse Spark survive a re-layout
             c["design"] = {"x": d["x"], "z": d["z"], "scale": d["scale"], **{k: d[k] for k in ("look", "units", "orient") if d.get(k)}}
+            if old_parts:
+                c["design"]["parts"] = old_parts
     spec["extras"] = design["extras"]
 
 
