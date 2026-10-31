@@ -15,9 +15,9 @@ const WFIcons = (() => {
       const sc = path("M-8,0 L8,0", "a", g); const run = (sp) => loop(s, sc, { y: 7 }, sp); sc.setAttribute("transform", "translate(0,-7)"); return { idle: () => run(1.6), think: (on) => run(on ? .45 : 1.6), done: () => pop(g) }; },
     engineer(g) { const s = {}; const c = el("g", {}, g); anchor(c); path("M0,-10 L9,-5 L9,5 L0,10 L-9,5 L-9,-5 Z", "s", c); path("M0,-10 L0,0 L9,5 M0,0 L-9,5", "a", c);
       const run = (sp) => loop(s, c, { rotation: 8 }, sp); return { idle: () => run(2.2), think: (on) => run(on ? .5 : 2.2), done: () => pop(c) }; },
-    calibrate(g) { const s = {}; path("M-10,5 A10,10 0 1 1 10,5", "s", g); const nd = el("g", {}, g); anchor(nd); path("M0,3 L5,-6", "a", nd); el("circle", { r: 1.8, class: "wfi-f", cy: 3 }, nd);
-      const run = (sp, amp) => { s.tw && s.tw.forEach((t) => t.kill()); if (!hasG || reduce) return; s.tw = [gsap.fromTo(nd, { rotation: -amp }, { rotation: amp, duration: sp, ease: "sine.inOut", yoyo: true, repeat: -1, svgOrigin: "0 3" })]; };
-      return { idle: () => run(1.8, 35), think: (on) => run(on ? .4 : 1.8, on ? 60 : 35), done: () => pop(nd) }; },
+    // static gauge: arc, tick marks and a needle pinned to the arc centre (the animated needle drifted off the dial)
+    calibrate(g) { path("M-10,5 A10,10 0 1 1 10,5", "s", g); path("M0,5 L6,-4", "a", g); el("circle", { r: 1.8, class: "wfi-f", cx: 0, cy: 5 }, g); path("M-8,-3 L-6.5,-2 M0,-7 L0,-5.5 M8,-3 L6.5,-2", "s", g, { "stroke-width": 1.1 });
+      return { idle: () => {}, think: () => {}, done: () => {} }; },
     hunt(g) { const s = {}; const l = el("g", {}, g); anchor(l); el("circle", { cx: -2, cy: -2, r: 6.5, class: "wfi s", fill: "rgba(255,160,70,.08)" }, l); path("M3,3 L10,10", "s", l, { "stroke-width": 2.4 }); path("M-3,0 L-1,-4 L1,0 L3,-3", "a", l);
       const run = (sp, amp) => loop(s, l, { x: amp, y: -amp * .6 }, sp); return { idle: () => run(2.2, 1.4), think: (on) => run(on ? .6 : 2.2, on ? 3 : 1.4), done: () => pop(l) }; },
     verify(g) { const s = {}; const sh = el("g", {}, g); anchor(sh); path("M0,-11 L9,-7 L9,2 C9,7 4,10 0,12 C-4,10 -9,7 -9,2 L-9,-7 Z", "s", sh); const ck = path("M-4,0 L-1,3 L5,-4", "a", sh, { pathLength: 1, "stroke-dasharray": 1 });
