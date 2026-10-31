@@ -171,7 +171,6 @@ python -m uvicorn server:app --port 8010
 
 ## Limits and roadmap
 
-**Thin spots we state openly.** One published pump test supplies 12 of the 27 component checks, and the real-program evidence above does not test our formulas. The savings model does not yet cover chillers, heat recovery or variable-speed compressors (the twin treats compressors as fixed-speed with a control type); adding them needs sourced part-load data first. The 3D shapes are designed from the photo but not verified against a real plant.
 
 **Real-world check.** Published evaluations of real industrial programs verify about 93% of predicted savings overall (Energy Trust of Oregon, 578 projects), but individual measures range from about 0.47 to 1.0 (for example compressed air 0.47 and variable-frequency drives 0.66 in a PG&E evaluation by Itron). Treat WattLoop's savings as an **upper-end screening estimate** that an engineer verifies on site. The Evidence panel lists these sources.
 
