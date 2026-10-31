@@ -198,14 +198,14 @@ const App = (() => {
   async function poll() { const r = await (await fetch(`/api/run/${runId}?since=${since}`)).json(); since = r.next; r.events.forEach((ev) => { try { handle(ev); } catch (e) { console.error("event handler failed", ev.type, e); } }); }
 
   // ---------------------------------------------------------------- instant demo (pre-computed, no AI)
-  async function demo() {
-    clearInterval(timer); hideLoader(); const d = await (await fetch("/api/demo/instant?pick=random")).json(); S.caseName = d.title || "Delta Foods (synthetic demo plant)";
+  async function demo(first) {   // first = the hero demo (Delta Foods, Muse Wonder shapes) that is shown when the app opens; the Demo button picks a random plant
+    clearInterval(timer); hideLoader(); const d = await (await fetch(first ? "/api/demo/instant" : "/api/demo/instant?pick=random")).json(); S.caseName = d.title || "Delta Foods (synthetic demo plant)";
     source = { type: "gallery", id: d.id || "demo" }; imgOk = true; setPhoto(d.file || "/api/demo/image"); $("#desc").value = d.description; $("#bill").value = d.bill_kwh; $("#overlay").innerHTML = ""; fillMachines(d.machines);
     renderBuild(d.spec, "pre-computed", true); renderBuild(d.result.spec_after, "after fixes · demo"); calSpec = d.spec; calib.twin = d.calibration; calib.bill = d.bill_kwh; drawCal(); $("#calnote").textContent = "Pre-computed demo: the twin already matches the bill."; $("#fixes tbody").innerHTML = ""; rej = 0;
     d.rounds.forEach((r, i) => fixRows(i + 1, r)); $("#alog").innerHTML = ""; alog("DEMO: pre-computed model, no AI call", "ok"); alog("Round 1 rejected 2 over-aggressive fixes", "bad"); alog("Round 2 verified the corrected plan", "ok");
     showResult(d.result); S.hourA = d.result.evaluation.hourly_before; S.hourB = d.result.evaluation.hourly_after; S.partsA = d.result.evaluation.parts_before; S.partsB = d.result.evaluation.parts_after;
-    Factory.setSpecs(d.spec, d.result.spec_after, S.partsA, S.partsB, S.hourA, S.hourB); Factory.focus(null); setMode("compare"); refreshAll(); $("#stat").textContent = "DEMO · 0 model calls · $0.0000";
-    notify("l"); notify("r"); caption("Demo twin loaded", "Pre-computed, no AI call. Click any machine tag or tab to look closer; press Build the twin for a live run."); imgStatus("ok", "Demo twin loaded instantly (pre-computed).");
+    Factory.setSpecs(d.spec, d.result.spec_after, S.partsA, S.partsB, S.hourA, S.hourB); Factory.focus(null); setMode(first ? "now" : "compare"); refreshAll(); $("#stat").textContent = "DEMO · 0 model calls · $0.0000";
+    if (!first) { notify("l"); notify("r"); } caption("Demo twin loaded", "Pre-computed, no AI call. Click any machine tag or tab to look closer; press Build the twin for a live run."); imgStatus("ok", "Demo twin loaded instantly (pre-computed).");
   }
 
   // ---------------------------------------------------------------- image source: gallery / upload
@@ -395,10 +395,10 @@ const App = (() => {
     try { if (localStorage.getItem("wl-side-l") === "1") setSide("l", true); if (localStorage.getItem("wl-side-r") === "1") setSide("r", true); } catch (e) { /* ignore */ }
     $(".photo").addEventListener("click", openSeen); $("#seenClose").addEventListener("click", () => { $("#seen").hidden = true; }); $("#seen").addEventListener("click", (e) => { if (e.target.id === "seen") $("#seen").hidden = true; });
     $("#pdfBtn").addEventListener("click", () => Report.download({ result: S.result, specBefore: calSpec, billKwh: +$("#bill").value, caseName: (S.caseName || "Facility") }));
-    loadMachines(); initBill();
+    loadMachines().then(() => demo(true)).catch(() => { /* the app still works without the opening demo */ }); initBill();
     $("#evBtn").addEventListener("click", openEvidence); $("#evClose").addEventListener("click", () => { $("#ev").hidden = true; }); $("#ev").addEventListener("click", (e) => { if (e.target.id === "ev") $("#ev").hidden = true; });
     document.querySelectorAll(".speed button").forEach((b) => b.addEventListener("click", () => { Factory.setSpeed(+b.dataset.s); document.querySelectorAll(".speed button").forEach((x) => x.classList.toggle("on", x === b)); }));
-    $("#run").addEventListener("click", start); $("#wfOpen").addEventListener("click", () => WF.open()); $("#demoBtn").addEventListener("click", demo); (function () { const st = $("#stage"), b = $("#tagsBtn"); const set = (off) => { st.classList.toggle("notags", off); b.textContent = off ? "Show tags" : "Hide tags"; try { localStorage.setItem("wl-notags", off ? "1" : "0"); } catch (e) { /* ignore */ } }; let off = false; try { off = localStorage.getItem("wl-notags") === "1"; } catch (e) { /* ignore */ } set(off); b.addEventListener("click", () => set(!st.classList.contains("notags"))); })();
+    $("#run").addEventListener("click", start); $("#wfOpen").addEventListener("click", () => WF.open()); $("#demoBtn").addEventListener("click", () => demo(false)); (function () { const st = $("#stage"), b = $("#tagsBtn"); const set = (off) => { st.classList.toggle("notags", off); b.textContent = off ? "Show tags" : "Hide tags"; try { localStorage.setItem("wl-notags", off ? "1" : "0"); } catch (e) { /* ignore */ } }; let off = false; try { off = localStorage.getItem("wl-notags") === "1"; } catch (e) { /* ignore */ } set(off); b.addEventListener("click", () => set(!st.classList.contains("notags"))); })();
     const togglePlay = () => { if ($("#loader").hidden) Factory.setPaused(!Factory.isPaused()); }; $("#playBtn").addEventListener("click", togglePlay); $(".top-right .clock").addEventListener("click", togglePlay);
     $("#overview").addEventListener("click", () => Factory.focus(null));
     $("#pick").addEventListener("click", (e) => { e.stopPropagation(); $("#pickMenu").hidden = !$("#pickMenu").hidden; });

@@ -164,7 +164,7 @@ python -m uvicorn server:app --port 8010
 # open http://localhost:8010
 ```
 
-**Try it without any key (about a minute).** The app starts in a labelled demo mode. Press **Demo**: a randomly chosen synthetic plant loads instantly, with its machine list, the real twin code, the real verifier (you will see over-aggressive fixes rejected, then a corrected plan), the Compare view, the PDF report and the Evidence panel. No model is called and nothing is billed.
+**The app opens with the Delta Foods demo plant already loaded** (its 3D machines designed by Muse Wonder), so there is something to see immediately. **Try it without any key (about a minute).** The app starts in a labelled demo mode. Press **Demo**: a randomly chosen synthetic plant loads instantly, with its machine list, the real twin code, the real verifier (you will see over-aggressive fixes rejected, then a corrected plan), the Compare view, the PDF report and the Evidence panel. No model is called and nothing is billed.
 
 **Full live run (photo or description, Muse Spark, SAM 3.1).** This needs your own Meta Model API key. Copy `.env.example` to `.env` (`copy .env.example .env` on Windows) and set `META_API_KEY` and `META_BASE_URL`; the key stays on the server and is never sent to the browser or committed. Event credits are only valid during the event window, so after that usage is billed to your own account: the built-in guard (per-run and daily call and dollar caps, a per-minute limit, at most 2 active runs, a Cancel button) keeps a run to roughly 15 model calls. A real run costs about $0.15-0.25 at list price. There is no sign-in; limits are per server.
 
