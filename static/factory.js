@@ -84,7 +84,9 @@ window.Factory = (function () {
         if (p.shape === "box") geo = new T.BoxGeometry(z[0], z[1], z[2]); else if (p.shape === "cylinder") geo = new T.CylinderGeometry(z[0], z[0], z[1], 24); else if (p.shape === "cone") geo = new T.CylinderGeometry(0.001, z[0], z[1], 24); else if (p.shape === "sphere") geo = new T.SphereGeometry(z[0], 16, 12); else geo = new T.TorusGeometry(z[0], z[1], 10, 28);
         const m = mk(geo, parseInt(p.color.slice(1), 16), EDGE, .6); m.position.set(p.pos[0], p.pos[1], p.pos[2]); if (p.opacity) { m.material.transparent = true; m.material.opacity = p.opacity; m.material.depthWrite = false; }
         if (p.rot) m.rotation.set(p.rot[0] * Math.PI / 180, p.rot[1] * Math.PI / 180, p.rot[2] * Math.PI / 180);
-        g.add(m); if (p.anim === "slide_x") w.slide.push({ m, c, lim: SLOTHX[c.type] * .96 }); else if (p.anim) w.spin.push({ m, axis: p.anim.slice(5), c });
+        if (p.anim && p.anim !== "slide_x") {   // a spinning part turns inside a pivot at its own centre, so a part laid on its side spins on its axis instead of swinging like a windmill
+          const pv = new T.Group(); pv.position.copy(m.position); m.position.set(0, 0, 0); pv.add(m); g.add(pv); w.spin.push({ m: pv, axis: p.anim.slice(5), c });
+        } else { g.add(m); if (p.anim === "slide_x") w.slide.push({ m, c, lim: SLOTHX[c.type] * .96 }); }
       });
       const sl = w.slide.filter((o) => o.c === c); if (sl.length > 1) { const xs = sl.map((o) => o.m.position.x), lo = Math.min(...xs), hi = Math.max(...xs), sp = (hi - lo) / (sl.length - 1) || 1; sl.forEach((o) => { o.lo = lo - sp / 2; o.span = hi - lo + sp; }); }   // products stay on the belt they were placed on
       zone(c, cx, cz, fw * K, fd * K);
