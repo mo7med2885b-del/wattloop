@@ -132,7 +132,7 @@ No real facility or personal data. The demo plant, its photo (generated with Mus
 
 ## Run it
 
-Python 3.10 or newer.
+Python 3.10 or newer. An internet connection is needed in the browser: the 3D view loads Three.js from the cdnjs CDN.
 
 ```bash
 git clone https://github.com/mo7med2885b-del/wattloop && cd wattloop
