@@ -13,7 +13,7 @@ const WF = (() => {
     ["vision", "Vision Reader", "vision", "agent", ""],
     ["segment", "Segmenter", "segment", "agent", "SAM 3.1"],
     ["engineer", "Twin Engineer", "engineer", "agent", ""],
-    ["design", "Scene Designer", "segment", "agent", "3D layout and props"],
+    ["design", "3D Designer", "segment", "agent", "Muse Wonder"],
     ["calibrate", "Calibrator loop", "calibrate", "agent", ""],
     ["hunt", "Waste Hunter", "hunt", "agent", ""],
     ["verify", "Fix Verifier", "verify", "code", "Simulator · no model"],
@@ -32,7 +32,7 @@ const WF = (() => {
   let svg, layer, nodes = {}, lines = {}, icons = {}, results = {}, breathe = null, t0 = 0, done = 0, calls = 0, cost = 0, rej = 0, modelLabel = "Muse Spark 1.3";
   const $$ = (id) => document.getElementById(id);
   const el = (tag, attrs = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) { const v = attrs[k]; if (typeof v === "string" && v.startsWith("var(")) e.style.setProperty(k, v); else e.setAttribute(k, v); } if (parent) parent.append(e); return e; };
-  const pretty = (m) => (m || "").replace(/^muse-spark-/, "Muse Spark ").replace(/^muse-/, "Muse ").replace(/^sam-/, "SAM ") || "Muse Spark 1.3";
+  const pretty = (m) => (m || "").replace(/^muse-wonder-.*/, "Muse Wonder").replace(/^muse-spark-/, "Muse Spark ").replace(/^muse-/, "Muse ").replace(/^sam-/, "SAM ") || "Muse Spark 1.3";
   const nameOf = (id) => (DEF.find((d) => d[0] === id) || [])[1] || (id === "core" ? "Orchestrator" : id);
 
   function card(id, name, ico, kind, sub) {
@@ -178,7 +178,7 @@ const WF = (() => {
         const id = ev.node, g = nodes[id]; if (!g) break; results[id] = ev; if (STEPS.includes(id)) stepMark(id, "done"); if (id === "design" && $$("wf").classList.contains("lc")) $$("wfLeft").classList.add("alert"); g.classList.remove("thinking"); icons[id] && (icons[id].think(false), icons[id].done());
         const bad = ev.output && (ev.output.error || ev.output.ok === false); g.classList.add("done", ev.fallback ? "st-warn" : bad ? "st-bad" : (DEF.find((d) => d[0] === id) || [])[3] === "code" ? "st-code" : "st-against"); pop(id);
         g.querySelector(".wf-stance").textContent = summarize(id, ev);
-        if (ev.model) { const mn = g.querySelector(".wf-mname"); if (mn) mn.textContent = pretty(ev.model); }
+        if (ev.model && ev.node !== "design") { const mn = g.querySelector(".wf-mname"); if (mn) mn.textContent = pretty(ev.model); }
         done += 1; $$("tDone").textContent = `${done}/12`; calls += ev.calls || 0; cost += ev.usd || 0; $$("tCalls").textContent = String(calls); $$("tCost").textContent = "Model calls";
         (INLINES[id] || []).forEach((l) => pulse(l, "back", 0.7, true));
         log(`${nameOf(id)}: ${summarize(id, ev).toLowerCase()}${ev.fallback && ev.note ? " (" + ev.note + ")" : ""}`, ev.fallback ? "warn" : bad ? "bad" : "ok"); break; }

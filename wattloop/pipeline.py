@@ -467,6 +467,7 @@ def scene_designer(run: Run, spec: dict, obs: dict, boxes: list[dict]):
     info = {**info, "usd": info.get("usd", 0.0) + pinfo.get("usd", 0.0), "calls": info.get("calls", 0) + (1 if pinfo.get("usd") else 0)}
     out["shapes_by_model"] = n
     if n:
+        info["model"] = pinfo.get("model") or info.get("model")   # the 3D shapes are the main work of this step
         info["note"] = f"{n} machine shapes designed by {(pinfo.get('model') or 'the model').replace('muse-', 'Muse ').replace('-1.0', '')}"
     return out, info
 
