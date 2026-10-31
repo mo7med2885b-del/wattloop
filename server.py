@@ -132,6 +132,19 @@ def preview():
 _EVIDENCE: dict = {}
 
 
+def _warm_evidence() -> None:
+    """Compute the Evidence panel's numbers once at startup (the synthetic benchmark takes several seconds), so the first open is instant."""
+    try:
+        from wattloop import validation
+        if not _EVIDENCE:
+            _EVIDENCE.update(validation.run())
+    except Exception:  # noqa: BLE001  (the endpoint computes it on demand if this fails)
+        pass
+
+
+threading.Thread(target=_warm_evidence, daemon=True).start()
+
+
 @app.get("/api/evidence")
 def evidence():
     from wattloop import validation

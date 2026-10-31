@@ -332,7 +332,7 @@ const App = (() => {
     g.addEventListener("dblclick", () => set(H < 24 ? 184 : 0));
   }
   async function openEvidence() {
-    $("#ev").hidden = false; const box = $("#evBody"); if (box.dataset.ready) return; box.textContent = "Loading…";
+    $("#ev").hidden = false; const box = $("#evBody"); if (box.dataset.ready) return; box.textContent = "Loading… the first open computes the numbers (a few seconds)";
     const d = await (await fetch("/api/evidence")).json(), L = d.legacy, C = d.current, comps = Object.keys(L.by_component), esc = (t) => String(t).replace(/</g, "&lt;");
     const fmtV = (r, v) => (r.unit === "kWh/yr" ? Math.round(v).toLocaleString("en-US") + " kWh/yr" : (v * 100).toFixed(1) + "%");
     const srcs = {}; L.rows.forEach((r) => { srcs[r.url] = r; });
