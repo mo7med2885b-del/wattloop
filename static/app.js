@@ -365,7 +365,8 @@ const App = (() => {
     loadMachines();
     $("#evBtn").addEventListener("click", openEvidence); $("#evClose").addEventListener("click", () => { $("#ev").hidden = true; }); $("#ev").addEventListener("click", (e) => { if (e.target.id === "ev") $("#ev").hidden = true; });
     document.querySelectorAll(".speed button").forEach((b) => b.addEventListener("click", () => { Factory.setSpeed(+b.dataset.s); document.querySelectorAll(".speed button").forEach((x) => x.classList.toggle("on", x === b)); }));
-    $("#run").addEventListener("click", start); $("#wfOpen").addEventListener("click", () => WF.open()); $("#demoBtn").addEventListener("click", demo); $("#overview").addEventListener("click", () => Factory.focus(null));
+    $("#run").addEventListener("click", start); $("#wfOpen").addEventListener("click", () => WF.open()); $("#demoBtn").addEventListener("click", demo); (function () { const st = $("#stage"), b = $("#tagsBtn"); const set = (off) => { st.classList.toggle("notags", off); b.textContent = off ? "Show tags" : "Hide tags"; try { localStorage.setItem("wl-notags", off ? "1" : "0"); } catch (e) { /* ignore */ } }; let off = false; try { off = localStorage.getItem("wl-notags") === "1"; } catch (e) { /* ignore */ } set(off); b.addEventListener("click", () => set(!st.classList.contains("notags"))); })();
+    $("#overview").addEventListener("click", () => Factory.focus(null));
     $("#pick").addEventListener("click", (e) => { e.stopPropagation(); $("#pickMenu").hidden = !$("#pickMenu").hidden; });
     document.addEventListener("click", () => { $("#pickMenu").hidden = true; });
     $("#pickMenu").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { $("#pickMenu").hidden = true; if (b.dataset.p === "gallery") openGallery(); else if (b.dataset.p === "describe") describeMode(); else $("#file").click(); }));
