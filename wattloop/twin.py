@@ -30,7 +30,7 @@ PARAMS = {
 }
 # LED power as a share of the old lamp, by baseline: PNNL-20404 (2011) T8 median of 0.649/0.597/0.772, T12 0.49; metal halide from rated watts only (PARTIAL)
 LED_BY_LEGACY = {"t8": 0.65, "t12": 0.49, "metal_halide": 0.32}
-PV_MAX_SHARE = 0.20   # ASSUMPTION: solar may not cover more than 30% of the plant's monthly energy (no roof data, no export credit)
+PV_MAX_SHARE = 0.20   # ASSUMPTION: solar may not cover more than 20% of the plant's monthly energy (no roof data, no export credit)
 COMPRESSOR_CURVES = {"modulating": (0.70, 0.30), "load_unload": (0.25, 0.75), "vsd": (0.04, 0.96)}   # vsd: power = 0.04 + 0.96 x flow, fitted on the 100% and 38% points of a measured CAGI data sheet (ELGI EG 160SP 100 V, ISO 1217 Annex E); checked on 4 held-out points  # power share at zero / extra at full load (CAC fact sheet 6; Fluid Power World 2018)
 # sensitivity sets: low / base / high savings. HVAC band 4.5% / 6% / 10% per degC; LED +-; pump static share +-0.2; leak slope 0.75 / 1 / 1
 SENSITIVITY = {"low": {"hvac_pct_per_c": 0.045, "led_scale": 1.15, "static_shift": 0.2, "leak_slope": 0.75},
