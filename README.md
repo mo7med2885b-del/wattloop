@@ -158,6 +158,8 @@ No real facility or personal data. The demo plant, its photo (generated with Mus
 
 Python 3.10 or newer. An internet connection is needed in the browser: the 3D view loads Three.js from the cdnjs CDN.
 
+**Tested:** a clean clone on Windows with Python 3.13 (fresh virtual environment, `pip install -r requirements.txt`, 42 tests pass, the server starts and the Demo and Evidence endpoints respond). **Not yet tested:** macOS, Linux and Python 3.10. **Needs:** internet in the browser (Three.js CDN) and, for a live run only, your own Meta Model API key; the Demo needs neither a key nor any model call.
+
 ```bash
 git clone https://github.com/mo7med2885b-del/wattloop && cd wattloop
 pip install -r requirements.txt   # includes pypdfium2 for reading PDF bills
